@@ -1,0 +1,7 @@
+node_modules/
+.env
+.engram/
+dist/
+coverage/
+*.log
+docs/output-*.txt
