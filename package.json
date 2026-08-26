@@ -1,0 +1,22 @@
+{
+  "name": "inventory-stock",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Inventory & Stock Management System — monolith modular + vertical slices, API-first",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:setup": "docker compose up -d && npm run migrate && npm run seed:admin",
+    "db:reset": "docker compose down -v && npm run db:setup",
+    "migrate": "npm run migrate --workspace=backend",
+    "seed:admin": "npm run seed:admin --workspace=backend",
+    "test": "npm test --workspace=backend",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev:api": "npm run dev --workspace=backend",
+    "dev:web": "npm run dev:web --workspace=frontend"
+  }
+}
