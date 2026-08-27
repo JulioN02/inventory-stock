@@ -1,6 +1,7 @@
 import type { RequestHandler } from 'express'
 import type { Db } from '../db/pool.ts'
 import type { Permission } from '../permissions/registry.ts'
+import * as auditRepo from '../modules/audit/repository.ts'
 import { ApiError } from './errorHandler.ts'
 
 /**
@@ -31,8 +32,17 @@ export function requirePermission(db: Db, permission: Permission): RequestHandle
     try {
       const allowed = await hasPermission(db, req.user.id, permission)
       if (!allowed) {
-        // Best-effort audit (auth.permission.denied) arrives with the audit
-        // module in I4 — audit_log is not created yet in I1.
+        // AUD-3: best-effort denial audit — never fails the request (D14).
+        await auditRepo.writeBestEffort(db, {
+          actorType: 'user',
+          actorUserId: req.user.id,
+          action: 'auth.permission.denied',
+          entityType: 'route',
+          entityId: null,
+          payload: { permission, method: req.method, path: req.path },
+          ip: req.ip ?? null,
+          userAgent: req.get('user-agent') ?? null,
+        })
         next(new ApiError(403, 'FORBIDDEN', `Missing permission: ${permission}`))
         return
       }

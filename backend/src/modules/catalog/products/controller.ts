@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express'
-import type { Db } from '../../../db/pool.ts'
+import type { Pool } from 'pg'
 import { ApiError } from '../../../middleware/errorHandler.ts'
 import type { ProductCreateInput, ProductUpdateInput } from './dto.ts'
 import { productListQuerySchema } from './dto.ts'
@@ -19,18 +19,27 @@ function paramId(req: Request): string {
   return id
 }
 
-/** Orchestration only (≤15 lines/endpoint). */
-export function createProductsController(deps: { db: Db }): ProductsController {
+/** requireAuth runs before every handler — the actor is always present. */
+function actorId(req: Request): string {
+  if (!req.user) {
+    throw new ApiError(401, 'UNAUTHENTICATED', 'Authentication required')
+  }
+  return req.user.id
+}
+
+/** Orchestration only (≤15 lines/endpoint). Writes run in a transaction (service). */
+export function createProductsController(deps: { db: Pool }): ProductsController {
   const { db } = deps
 
   async function create(req: Request, res: Response): Promise<void> {
-    const product = await productService.createProduct(db, req.body as ProductCreateInput)
+    const product = await productService.createProduct(db, actorId(req), req.body as ProductCreateInput)
     res.status(201).json({ product })
   }
 
   async function update(req: Request, res: Response): Promise<void> {
     const product = await productService.updateProduct(
       db,
+      actorId(req),
       paramId(req),
       req.body as ProductUpdateInput,
     )
@@ -46,7 +55,7 @@ export function createProductsController(deps: { db: Db }): ProductsController {
   }
 
   async function remove(req: Request, res: Response): Promise<void> {
-    const product = await productService.deactivateProduct(db, paramId(req))
+    const product = await productService.deactivateProduct(db, actorId(req), paramId(req))
     res.json({ product })
   }
 

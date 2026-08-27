@@ -15,7 +15,10 @@ export function createTestPool(): Pool {
   return createPool(testDatabaseUrl())
 }
 
-const TRUNCATE_TABLES = 'refresh_tokens, user_roles, users, products, warehouses'
+// Explicitly listed: movements (ledger) and audit_log (I4) are runtime-owned
+// rows reset per test. CASCADE still covers FK dependents as defense-in-depth.
+const TRUNCATE_TABLES =
+  'refresh_tokens, user_roles, users, products, warehouses, movements, audit_log'
 
 /**
  * Resets runtime data between tests. Roles/permissions stay seeded by the

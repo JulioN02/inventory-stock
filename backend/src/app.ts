@@ -10,6 +10,7 @@ import { notFoundHandler, errorHandler } from './middleware/errorMiddleware.ts'
 import { createAuthRouter } from './modules/auth/routes.ts'
 import { createCatalogRouter } from './modules/catalog/routes.ts'
 import { createMovementsRouter } from './modules/movements/routes.ts'
+import { createAuditRouter } from './modules/audit/routes.ts'
 
 export interface AppDeps {
   db: Pool
@@ -36,6 +37,7 @@ export function createApp({ db, config }: AppDeps): Express {
   const movementsRouter = createMovementsRouter({ db, config })
   app.use('/api/movements', movementsRouter.movements)
   app.use('/api/stock', movementsRouter.stock)
+  app.use('/api/audit', createAuditRouter({ db, config }))
 
   // Production: serve the built SPA from a single origin (decision D3).
   // Wired in I1 — does not block when frontend/dist does not exist yet.

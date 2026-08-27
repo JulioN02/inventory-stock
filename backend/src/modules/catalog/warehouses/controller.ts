@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express'
-import type { Db } from '../../../db/pool.ts'
+import type { Pool } from 'pg'
 import { ApiError } from '../../../middleware/errorHandler.ts'
 import type { WarehouseCreateInput, WarehouseUpdateInput } from './dto.ts'
 import { warehouseListQuerySchema } from './dto.ts'
@@ -19,17 +19,27 @@ function paramId(req: Request): string {
   return id
 }
 
-export function createWarehousesController(deps: { db: Db }): WarehousesController {
+/** requireAuth runs before every handler — the actor is always present. */
+function actorId(req: Request): string {
+  if (!req.user) {
+    throw new ApiError(401, 'UNAUTHENTICATED', 'Authentication required')
+  }
+  return req.user.id
+}
+
+/** Orchestration only (≤15 lines/endpoint). Writes run in a transaction (service). */
+export function createWarehousesController(deps: { db: Pool }): WarehousesController {
   const { db } = deps
 
   async function create(req: Request, res: Response): Promise<void> {
-    const warehouse = await warehouseService.createWarehouse(db, req.body as WarehouseCreateInput)
+    const warehouse = await warehouseService.createWarehouse(db, actorId(req), req.body as WarehouseCreateInput)
     res.status(201).json({ warehouse })
   }
 
   async function update(req: Request, res: Response): Promise<void> {
     const warehouse = await warehouseService.updateWarehouse(
       db,
+      actorId(req),
       paramId(req),
       req.body as WarehouseUpdateInput,
     )
@@ -45,7 +55,7 @@ export function createWarehousesController(deps: { db: Db }): WarehousesControll
   }
 
   async function remove(req: Request, res: Response): Promise<void> {
-    const warehouse = await warehouseService.deactivateWarehouse(db, paramId(req))
+    const warehouse = await warehouseService.deactivateWarehouse(db, actorId(req), paramId(req))
     res.json({ warehouse })
   }
 

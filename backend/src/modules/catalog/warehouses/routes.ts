@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import type { Db } from '../../../db/pool.ts'
+import type { Pool } from 'pg'
 import type { AppConfig } from '../../../config/env.ts'
 import { validateDto } from '../../../middleware/validate.ts'
 import { requireAuth } from '../../../middleware/requireAuth.ts'
@@ -9,7 +9,7 @@ import type { Permission } from '../../../permissions/registry.ts'
 import { createWarehousesController } from './controller.ts'
 import { warehouseCreateSchema, warehouseUpdateSchema } from './dto.ts'
 
-export function createWarehousesRouter(deps: { db: Db; config: AppConfig }): Router {
+export function createWarehousesRouter(deps: { db: Pool; config: AppConfig }): Router {
   const router = Router()
   const ctrl = createWarehousesController(deps)
   const auth = requireAuth(deps.config.jwtSecret)

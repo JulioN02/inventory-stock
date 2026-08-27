@@ -2,6 +2,7 @@ import type { Pool } from 'pg'
 import { ApiError } from '../../middleware/errorHandler.ts'
 import type { Db } from '../../db/pool.ts'
 import { withTransaction } from '../../db/transaction.ts'
+import * as auditRepo from '../audit/repository.ts'
 import type {
   AdjustmentCreateInput,
   LowStockQuery,
@@ -147,6 +148,23 @@ export async function registerMovement(
     if (sign === MOVEMENT_SIGNS.minus) {
       await assertStockNonNegative(client, input.product_id, input.warehouse_id)
     }
+    // AUD-1/AUD-2: audit row in the SAME transaction — a rollback takes it away.
+    await auditRepo.write(client, {
+      actorType: 'user',
+      actorUserId: actorId,
+      action: 'movements.movement.create',
+      entityType: 'movement',
+      entityId: inserted.id,
+      payload: {
+        type: inserted.type,
+        quantity: inserted.quantity,
+        sign: inserted.sign,
+        product_id: inserted.product_id,
+        warehouse_id: inserted.warehouse_id,
+        idempotency_key: inserted.idempotency_key,
+        reference: inserted.reference ?? null,
+      },
+    })
     return { movement: toMovementDto(inserted), replay: false }
   })
 }
@@ -218,6 +236,24 @@ export async function transfer(
 
     // Destination only gains — recheck the SOURCE only.
     await assertStockNonNegative(client, input.product_id, input.source_warehouse_id)
+    // AUD-1: one audit row per atomic transfer, same-tx (rollback removes it).
+    await auditRepo.write(client, {
+      actorType: 'user',
+      actorUserId: actorId,
+      action: 'movements.transfer.create',
+      entityType: 'movement',
+      entityId: outRow.id,
+      payload: {
+        type: 'transfer',
+        quantity: outRow.quantity,
+        sign: outRow.sign,
+        product_id: outRow.product_id,
+        source_warehouse_id: input.source_warehouse_id,
+        destination_warehouse_id: input.destination_warehouse_id,
+        operation_group_id: outRow.operation_group_id,
+        idempotency_key: outRow.idempotency_key,
+      },
+    })
     return { movement: toMovementDto(outRow), replay: false }
   })
 }
@@ -265,6 +301,23 @@ export async function adjust(
     if (sign === MOVEMENT_SIGNS.minus) {
       await assertStockNonNegative(client, input.product_id, input.warehouse_id)
     }
+    // AUD-1: adjustment audit row, same-tx (rollback removes it).
+    await auditRepo.write(client, {
+      actorType: 'user',
+      actorUserId: actorId,
+      action: 'movements.adjustment.create',
+      entityType: 'movement',
+      entityId: inserted.id,
+      payload: {
+        type: inserted.type,
+        quantity: inserted.quantity,
+        sign: inserted.sign,
+        product_id: inserted.product_id,
+        warehouse_id: inserted.warehouse_id,
+        idempotency_key: inserted.idempotency_key,
+        reason: inserted.reference ?? null,
+      },
+    })
     return { movement: toMovementDto(inserted), replay: false }
   })
 }
