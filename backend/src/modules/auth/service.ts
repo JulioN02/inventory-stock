@@ -5,6 +5,7 @@ import type { Pool } from 'pg'
 import { ApiError, isUniqueViolation } from '../../middleware/errorHandler.ts'
 import type { Db } from '../../db/pool.ts'
 import { withTransaction } from '../../db/transaction.ts'
+import * as auditRepo from '../audit/repository.ts'
 import type { LoginInput, RegisterInput } from './dto.ts'
 import * as authRepo from './repository.ts'
 
@@ -12,6 +13,12 @@ export const BCRYPT_COST = 10 // OQ-4 confirmed: spec floor, internal tool perf
 export const ACCESS_TOKEN_TTL_SECONDS = 15 * 60
 export const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60
 export const DEFAULT_ROLE = 'viewer' // decision D12
+
+/** Optional request context recorded on auth audit rows (ip/user_agent MAY be recorded, AUD-1). */
+export interface AuthMeta {
+  ip?: string | null
+  userAgent?: string | null
+}
 
 export interface PublicUser {
   id: string
@@ -104,13 +111,38 @@ export async function login(
   db: Db,
   input: LoginInput,
   secret: string,
+  meta?: AuthMeta,
 ): Promise<{ user: PublicUser } & TokenPair> {
   const user = await authRepo.findByUsername(db, input.username)
   const passwordOk = user ? await bcrypt.compare(input.password, user.password_hash) : false
   if (!user || !passwordOk || !user.active) {
+    // AUD-3: best-effort audit — the identical 401 is still logged, and the
+    // payload never reveals WHICH field failed (no enumeration, AUTH-2).
+    await auditRepo.writeBestEffort(db, {
+      actorType: user ? 'user' : 'anonymous',
+      actorUserId: user?.id ?? null,
+      action: 'auth.login.failure',
+      entityType: 'user',
+      entityId: user?.id ?? null,
+      payload: { username: input.username, outcome: 'failure' },
+      ip: meta?.ip ?? null,
+      userAgent: meta?.userAgent ?? null,
+    })
     throw new ApiError(401, 'INVALID_CREDENTIALS', 'Invalid username or password')
   }
   const tokens = await issueTokenPair(db, user, secret)
+  // AUD-3: login success audit (best-effort — never fails the request, D14).
+  // AUD-6: payload carries id/username/outcome only — NO credential material.
+  await auditRepo.writeBestEffort(db, {
+    actorType: 'user',
+    actorUserId: user.id,
+    action: 'auth.login.success',
+    entityType: 'user',
+    entityId: user.id,
+    payload: { username: user.username, outcome: 'success' },
+    ip: meta?.ip ?? null,
+    userAgent: meta?.userAgent ?? null,
+  })
   return { user: toPublicUser(user), ...tokens }
 }
 
@@ -138,7 +170,7 @@ type RotationOutcome =
  * transaction COMMITS their revocation before the 401 is thrown (a throw
  * inside the transaction would ROLLBACK the family invalidation).
  */
-export async function refresh(pool: Pool, rawToken: string | undefined, secret: string): Promise<RefreshResult> {
+export async function refresh(pool: Pool, rawToken: string | undefined, secret: string, meta?: AuthMeta): Promise<RefreshResult> {
   if (!rawToken) {
     throw new ApiError(401, 'UNAUTHENTICATED', 'Refresh token missing')
   }
@@ -165,6 +197,18 @@ export async function refresh(pool: Pool, rawToken: string | undefined, secret: 
     if (row.revoked_at !== null) {
       // Reuse of an already-rotated token → invalidate the ENTIRE family.
       await authRepo.revokeFamily(client, row.family_id)
+      // AUD-3: best-effort marker of the family invalidation, same-tx with the
+      // revoke (the tx COMMITs the invalidation; the 401 is thrown after it).
+      await auditRepo.writeBestEffort(client, {
+        actorType: 'user',
+        actorUserId: row.user_id,
+        action: 'auth.refresh.reuse',
+        entityType: 'refresh_token',
+        entityId: row.id,
+        payload: { family_id: row.family_id, outcome: 'family_invalidated' },
+        ip: meta?.ip ?? null,
+        userAgent: meta?.userAgent ?? null,
+      })
       return { kind: 'reuse' }
     }
     if (new Date(row.expires_at).getTime() <= Date.now()) {
@@ -216,7 +260,20 @@ export async function refresh(pool: Pool, rawToken: string | undefined, secret: 
 }
 
 /** AUTH-4: logout — idempotent, revokes the current refresh row. */
-export async function logout(db: Db, rawToken: string | undefined): Promise<void> {
+export async function logout(db: Db, rawToken: string | undefined, meta?: AuthMeta): Promise<void> {
   if (!rawToken) return
-  await authRepo.revokeByTokenHash(db, sha256Hex(rawToken))
+  const userId = await authRepo.revokeByTokenHash(db, sha256Hex(rawToken))
+  if (userId) {
+    // AUD-3: best-effort audit of the session end.
+    await auditRepo.writeBestEffort(db, {
+      actorType: 'user',
+      actorUserId: userId,
+      action: 'auth.logout',
+      entityType: 'user',
+      entityId: userId,
+      payload: { outcome: 'success' },
+      ip: meta?.ip ?? null,
+      userAgent: meta?.userAgent ?? null,
+    })
+  }
 }

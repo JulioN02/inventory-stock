@@ -1,5 +1,8 @@
+import type { Pool, PoolClient } from 'pg'
 import { ApiError, isUniqueViolation } from '../../../middleware/errorHandler.ts'
 import type { Db } from '../../../db/pool.ts'
+import { withTransaction } from '../../../db/transaction.ts'
+import * as auditRepo from '../../audit/repository.ts'
 import type { WarehouseCreateInput, WarehouseListQuery, WarehouseUpdateInput } from './dto.ts'
 import * as warehouseRepo from './repository.ts'
 import type { WarehouseRecord } from './repository.ts'
@@ -35,29 +38,68 @@ function mapUniqueViolation(err: unknown): ApiError {
   return new ApiError(409, 'WAREHOUSE_TAKEN', 'Duplicate warehouse name or code')
 }
 
-/** CAT-5: create with name/code uniqueness (409). */
+/** AUD-2: the audit row is written in the SAME transaction as the domain change. */
+function writeWarehouseAudit(
+  client: PoolClient,
+  entry: {
+    actorUserId: string
+    action: string
+    entityId: string
+    payload: Record<string, unknown>
+  },
+): Promise<void> {
+  return auditRepo.write(client, {
+    actorType: 'user',
+    actorUserId: entry.actorUserId,
+    action: entry.action,
+    entityType: 'warehouse',
+    entityId: entry.entityId,
+    payload: entry.payload,
+  })
+}
+
+/** CAT-5: create with name/code uniqueness (409). Audit same-tx (AUD-1). */
 export async function createWarehouse(
-  db: Db,
+  pool: Pool,
+  actorId: string,
   input: WarehouseCreateInput,
 ): Promise<WarehouseDto> {
   try {
-    return toWarehouseDto(await warehouseRepo.createWarehouse(db, input))
+    return await withTransaction(pool, async (client) => {
+      const row = await warehouseRepo.createWarehouse(client, input)
+      await writeWarehouseAudit(client, {
+        actorUserId: actorId,
+        action: 'catalog.warehouse.create',
+        entityId: row.id,
+        payload: { name: row.name, code: row.code },
+      })
+      return toWarehouseDto(row)
+    })
   } catch (err) {
     if (isUniqueViolation(err)) throw mapUniqueViolation(err)
     throw err
   }
 }
 
-/** CAT-6: update name/code with uniqueness re-check. */
+/** CAT-6: update name/code with uniqueness re-check. Audit same-tx. */
 export async function updateWarehouse(
-  db: Db,
+  pool: Pool,
+  actorId: string,
   id: string,
   patch: WarehouseUpdateInput,
 ): Promise<WarehouseDto> {
   try {
-    const row = await warehouseRepo.updateWarehouse(db, id, patch)
-    if (!row) throw new ApiError(404, 'NOT_FOUND', 'Warehouse not found')
-    return toWarehouseDto(row)
+    return await withTransaction(pool, async (client) => {
+      const row = await warehouseRepo.updateWarehouse(client, id, patch)
+      if (!row) throw new ApiError(404, 'NOT_FOUND', 'Warehouse not found')
+      await writeWarehouseAudit(client, {
+        actorUserId: actorId,
+        action: 'catalog.warehouse.update',
+        entityId: row.id,
+        payload: { name: row.name, code: row.code },
+      })
+      return toWarehouseDto(row)
+    })
   } catch (err) {
     if (isUniqueViolation(err)) throw mapUniqueViolation(err)
     throw err
@@ -78,9 +120,21 @@ export async function listWarehouses(db: Db, query: WarehouseListQuery) {
   }
 }
 
-/** CAT-6: soft deactivate. */
-export async function deactivateWarehouse(db: Db, id: string): Promise<WarehouseDto> {
-  const row = await warehouseRepo.deactivateWarehouse(db, id)
-  if (!row) throw new ApiError(404, 'NOT_FOUND', 'Warehouse not found')
-  return toWarehouseDto(row)
+/** CAT-6: soft deactivate. Audit same-tx. */
+export async function deactivateWarehouse(
+  pool: Pool,
+  actorId: string,
+  id: string,
+): Promise<WarehouseDto> {
+  return withTransaction(pool, async (client) => {
+    const row = await warehouseRepo.deactivateWarehouse(client, id)
+    if (!row) throw new ApiError(404, 'NOT_FOUND', 'Warehouse not found')
+    await writeWarehouseAudit(client, {
+      actorUserId: actorId,
+      action: 'catalog.warehouse.deactivate',
+      entityId: row.id,
+      payload: { name: row.name, code: row.code, active: false },
+    })
+    return toWarehouseDto(row)
+  })
 }
