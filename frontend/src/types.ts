@@ -37,6 +37,24 @@ export interface ListResult<T> {
   pageSize: number
 }
 
+/** I2: derived stock row (GET /api/stock) — stock is a string numeric, scale 1. */
+export interface StockItem {
+  product_id: string
+  sku: string
+  name: string
+  warehouse_id: string
+  warehouse_code: string
+  stock: string
+}
+
+/** I2: low-stock row (GET /api/stock/low) — strictly below threshold. */
+export interface LowStockItem {
+  product_id: string
+  sku: string
+  name: string
+  stock: string
+}
+
 export interface LoginResponse {
   user: User
   accessToken: string

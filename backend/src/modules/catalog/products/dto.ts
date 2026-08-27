@@ -1,24 +1,8 @@
 import { z } from 'zod'
+import { decimalString } from '../../../lib/decimal.ts'
 
 export const UNITS = ['kg', 'g', 'l', 'ml', 'unit', 'box', 'pair'] as const
 export type Unit = (typeof UNITS)[number]
-
-/**
- * Decimal string with a maximum scale — numerics travel as strings
- * (decision D13). Accepts JSON numbers too, canonicalized to strings.
- */
-function decimalString(maxScale: number) {
-  return z
-    .union([z.string(), z.number()])
-    .transform((value) => (typeof value === 'number' ? String(value) : value.trim()))
-    .refine((value) => /^\d+(\.\d+)?$/.test(value), {
-      message: 'must be a non-negative decimal number',
-    })
-    .refine((value) => {
-      const parts = value.split('.')
-      return parts.length === 1 || (parts[1]?.length ?? 0) <= maxScale
-    }, { message: `must have at most ${maxScale} decimal place(s)` })
-}
 
 const skuSchema = z
   .string()
