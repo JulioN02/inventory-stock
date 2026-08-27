@@ -4,14 +4,14 @@ import cookieParser from 'cookie-parser'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import type { Pool } from 'pg'
 import type { AppConfig } from './config/env.ts'
-import type { Db } from './db/pool.ts'
 import { notFoundHandler, errorHandler } from './middleware/errorMiddleware.ts'
 import { createAuthRouter } from './modules/auth/routes.ts'
 import { createCatalogRouter } from './modules/catalog/routes.ts'
 
 export interface AppDeps {
-  db: Db
+  db: Pool
   config: AppConfig
 }
 

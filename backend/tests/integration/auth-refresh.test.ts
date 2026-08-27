@@ -115,3 +115,89 @@ test('AUTH-3: expired refresh token → 401', async () => {
     .send({})
   assert.equal(res.status, 401)
 })
+
+// W1 (verify-report): refresh rotation must be atomic. Concurrent refreshes
+// with the SAME token must yield exactly one winner; the family invariant
+// "one active token per family" must hold afterwards.
+test('AUTH-3 (W1): concurrent refreshes with the same token → exactly one 200, one active token', async () => {
+  await seedOperator()
+  const ag = agent()
+  const before = await login(ag)
+
+  // Warm the pool: cold pg connections take ~100ms each to create, which would
+  // SERIALIZE the burst (each request would see the winner's already-committed
+  // rotation → family killed → 0 active). With connections ready, the 5 requests
+  // reach the DB within a few ms of each other and the row lock does its job.
+  await Promise.all(Array.from({ length: 8 }, () => ctx.pool.query('SELECT 1')))
+
+  const attempts = Array.from({ length: 5 }, () =>
+    request(ctx.app).post('/api/auth/refresh').set('Cookie', before.cookie).send({}),
+  )
+  const results = await Promise.all(attempts)
+
+  const ok = results.filter((r) => r.status === 200)
+  const unauthorized = results.filter((r) => r.status === 401)
+  assert.equal(ok.length, 1, 'exactly one concurrent refresh wins the rotation')
+  assert.equal(unauthorized.length, 4, 'the remaining concurrent refreshes are rejected with 401')
+
+  const { rows } = await ctx.pool.query(
+    `SELECT id, family_id, revoked_at FROM refresh_tokens ORDER BY created_at`,
+  )
+  const familyIds = new Set(rows.map((r: { family_id: string }) => r.family_id))
+  assert.equal(familyIds.size, 1, 'rotation kept a single family')
+  const active = rows.filter((r: { revoked_at: Date | null }) => r.revoked_at === null)
+  assert.equal(active.length, 1, 'exactly one active token remains for the family')
+})
+
+// Triangulation: the winner's surviving token must still work (the family was
+// not collateral-damaged by the concurrent losers).
+test('AUTH-3 (W1): winner token from the concurrent burst remains usable', async () => {
+  await seedOperator()
+  const ag = agent()
+  const before = await login(ag)
+  await Promise.all(Array.from({ length: 8 }, () => ctx.pool.query('SELECT 1')))
+
+  const results = await Promise.all(
+    Array.from({ length: 5 }, () =>
+      request(ctx.app).post('/api/auth/refresh').set('Cookie', before.cookie).send({}),
+    ),
+  )
+  const winner = results.find((r) => r.status === 200)
+  assert.ok(winner, 'exactly one request wins the rotation')
+  const winnerCookie = (winner.headers['set-cookie'] as string[] | undefined)?.[0]
+  assert.ok(winnerCookie, 'winner receives a rotated cookie')
+
+  // The winner's new token is the single survivor — a follow-up refresh works.
+  const followUp = await request(ctx.app)
+    .post('/api/auth/refresh')
+    .set('Cookie', winnerCookie)
+    .send({})
+  assert.equal(followUp.status, 200)
+  assert.ok(typeof followUp.body.accessToken === 'string')
+})
+
+// Triangulation: reuse detection must still hold AFTER the concurrent burst —
+// replaying the pre-burst token invalidates the family (winner's token too).
+test('AUTH-3 (W1): replaying the original token after the burst → 401 and family invalidated', async () => {
+  await seedOperator()
+  const ag = agent()
+  const before = await login(ag)
+  await Promise.all(Array.from({ length: 8 }, () => ctx.pool.query('SELECT 1')))
+
+  await Promise.all(
+    Array.from({ length: 5 }, () =>
+      request(ctx.app).post('/api/auth/refresh').set('Cookie', before.cookie).send({}),
+    ),
+  )
+
+  const replay = await request(ctx.app)
+    .post('/api/auth/refresh')
+    .set('Cookie', before.cookie)
+    .send({})
+  assert.equal(replay.status, 401)
+  assert.equal(replay.body.error.code, 'UNAUTHENTICATED')
+
+  const { rows } = await ctx.pool.query(`SELECT revoked_at FROM refresh_tokens`)
+  assert.equal(rows.length, 2)
+  assert.ok(rows.every((r: { revoked_at: Date | null }) => r.revoked_at !== null), 'entire family revoked')
+})

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { api, setAccessToken, setSessionExpiredHandler } from '../api/client.ts'
 import type { LoginResponse, User } from '../types.ts'
+import { getRolePermissions } from './permissions.ts'
 
 /**
  * Minimal auth state: user + in-memory access token (react-19 skill:
@@ -19,21 +20,9 @@ interface AuthState {
 const AuthContext = createContext<AuthState | null>(null)
 
 /**
- * Frontend mirror of the seeded role → permission matrix (manually mirrored,
- * no codegen in v1). Used only for UI gating — the server enforces RBAC.
+ * UI gating mirror lives in ./permissions.ts (getRolePermissions) and matches
+ * the server matrix EXACTLY (W2). The server remains the source of truth.
  */
-const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
-  admin: [
-    'users:create',
-    'catalog:create',
-    'catalog:read',
-    'catalog:update',
-    'catalog:deactivate',
-  ],
-  operator: ['catalog:create', 'catalog:read', 'catalog:update', 'catalog:deactivate'],
-  viewer: ['catalog:read'],
-  auditor: ['catalog:read'],
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -88,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   function hasPermission(permission: string): boolean {
     if (!user) return false
-    return (ROLE_PERMISSIONS[user.role] ?? []).includes(permission)
+    return getRolePermissions(user.role).includes(permission)
   }
 
   return (

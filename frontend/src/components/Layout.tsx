@@ -17,8 +17,12 @@ export function Layout() {
         <span className="brand">Inventory &amp; Stock</span>
         <nav className="nav">
           <NavLink to="/">Dashboard</NavLink>
-          <NavLink to="/products">Products</NavLink>
-          <NavLink to="/warehouses">Warehouses</NavLink>
+          <RoleGate permission="catalog:read">
+            <NavLink to="/products">Products</NavLink>
+          </RoleGate>
+          <RoleGate permission="catalog:read">
+            <NavLink to="/warehouses">Warehouses</NavLink>
+          </RoleGate>
           <RoleGate permission="users:create">
             <NavLink to="/register">Register</NavLink>
           </RoleGate>

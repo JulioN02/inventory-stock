@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express'
-import type { Db } from '../../db/pool.ts'
+import type { Pool } from 'pg'
 import type { AppConfig } from '../../config/env.ts'
 import type { LoginInput, RegisterInput } from './dto.ts'
 import * as authService from './service.ts'
@@ -13,7 +13,7 @@ export interface AuthController {
 }
 
 /** Orchestration only — every endpoint stays under 15 lines (vertical-slices). */
-export function createAuthController(deps: { db: Db; config: AppConfig }): AuthController {
+export function createAuthController(deps: { db: Pool; config: AppConfig }): AuthController {
   const { db, config } = deps
 
   async function register(req: Request, res: Response): Promise<void> {

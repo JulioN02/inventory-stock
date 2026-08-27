@@ -1,5 +1,6 @@
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import { ProtectedRoute } from './components/ProtectedRoute.tsx'
+import { RoleGate } from './components/RoleGate.tsx'
 import { Layout } from './components/Layout.tsx'
 import { LoginPage } from './pages/LoginPage.tsx'
 import { RegisterPage } from './pages/RegisterPage.tsx'
@@ -28,8 +29,22 @@ export function App() {
         }
       >
         <Route index element={<DashboardPage />} />
-        <Route path="products" element={<ProductsPage />} />
-        <Route path="warehouses" element={<WarehousesPage />} />
+        <Route
+          path="products"
+          element={
+            <RoleGate permission="catalog:read" fallback={<Navigate to="/" replace />}>
+              <ProductsPage />
+            </RoleGate>
+          }
+        />
+        <Route
+          path="warehouses"
+          element={
+            <RoleGate permission="catalog:read" fallback={<Navigate to="/" replace />}>
+              <WarehousesPage />
+            </RoleGate>
+          }
+        />
       </Route>
     </Routes>
   )

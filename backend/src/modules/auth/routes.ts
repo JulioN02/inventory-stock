@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import type { Db } from '../../db/pool.ts'
+import type { Pool } from 'pg'
 import type { AppConfig } from '../../config/env.ts'
 import { validateDto } from '../../middleware/validate.ts'
 import { requireAuth } from '../../middleware/requireAuth.ts'
@@ -8,7 +8,7 @@ import { PERMISSIONS } from '../../permissions/registry.ts'
 import { createAuthController } from './controller.ts'
 import { loginSchema, registerSchema } from './dto.ts'
 
-export function createAuthRouter(deps: { db: Db; config: AppConfig }): Router {
+export function createAuthRouter(deps: { db: Pool; config: AppConfig }): Router {
   const router = Router()
   const ctrl = createAuthController(deps)
 

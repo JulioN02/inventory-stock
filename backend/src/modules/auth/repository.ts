@@ -85,18 +85,34 @@ export async function insertRefreshToken(
   )
 }
 
-export async function findByTokenHash(db: Db, tokenHash: string): Promise<RefreshTokenRecord | null> {
-  const { rows } = await db.query(`SELECT * FROM refresh_tokens WHERE token_hash = $1`, [tokenHash])
+/**
+ * W1: locks the refresh-token row for the duration of the rotation transaction.
+ * `FOR UPDATE SKIP LOCKED` makes concurrent refreshes of the SAME token fail
+ * fast (no row → 401) while the winner's transaction is still open, so a
+ * concurrent loser never observes the rotation as a "replay". A genuine
+ * sequential replay (row not locked) still reads the revoked row and hits the
+ * reuse branch, which invalidates the whole family (AUTH-3).
+ */
+export async function findByTokenHashForUpdate(
+  db: Db,
+  tokenHash: string,
+): Promise<RefreshTokenRecord | null> {
+  const { rows } = await db.query(
+    `SELECT * FROM refresh_tokens WHERE token_hash = $1 FOR UPDATE SKIP LOCKED`,
+    [tokenHash],
+  )
   return (rows[0] as RefreshTokenRecord | undefined) ?? null
 }
 
-/** Rotates: revokes the old row and records which jti replaced it. */
-export async function revokeToken(db: Db, id: string, replacedBy: string | null): Promise<void> {
-  await db.query(
+/** Rotates: revokes the old row and records which jti replaced it. Returns false when the row was already revoked. */
+export async function revokeToken(db: Db, id: string, replacedBy: string | null): Promise<boolean> {
+  const { rows } = await db.query(
     `UPDATE refresh_tokens SET revoked_at = now(), replaced_by = $2
-     WHERE id = $1 AND revoked_at IS NULL`,
+     WHERE id = $1 AND revoked_at IS NULL
+     RETURNING id`,
     [id, replacedBy],
   )
+  return rows.length > 0
 }
 
 /** Reuse detection: invalidates every still-active token of the family. */
