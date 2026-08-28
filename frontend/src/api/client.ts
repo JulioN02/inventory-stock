@@ -42,7 +42,16 @@ interface RequestOptions extends RequestInit {
   retried?: boolean
 }
 
-export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
+/**
+ * Shared request flow: Bearer + Content-Type headers, 401 → refresh-retry
+ * ONCE, uniform ApiClientError envelope. Returns the raw HTTP status plus the
+ * parsed body so callers can distinguish e.g. 200 (idempotent replay) from
+ * 201 (new resource) — the only replay signal (D-P6).
+ */
+async function apiFetchRaw<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<{ status: number; data: T }> {
   const headers = new Headers(options.headers)
   headers.set('Content-Type', 'application/json')
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`)
@@ -54,7 +63,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   if (res.status === 401 && !options.retried && !isLogin && !isRefresh) {
     const token = await refreshAccessToken()
     if (token) {
-      return apiFetch<T>(path, { ...options, retried: true })
+      return apiFetchRaw<T>(path, { ...options, retried: true })
     }
     setAccessToken(null)
     onSessionExpired?.()
@@ -74,7 +83,12 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       body?.error?.message ?? `Request failed with status ${res.status}`,
     )
   }
-  return (await res.json()) as T
+  return { status: res.status, data: (await res.json()) as T }
+}
+
+export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const result = await apiFetchRaw<T>(path, options)
+  return result.data
 }
 
 export const api = {
@@ -84,4 +98,7 @@ export const api = {
   patch: <T>(path: string, body: unknown): Promise<T> =>
     apiFetch<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: <T>(path: string): Promise<T> => apiFetch<T>(path, { method: 'DELETE' }),
+  /** Additive (D-P6): POST that exposes the raw status — used ONLY by the movement write forms. */
+  postWithStatus: <T>(path: string, body: unknown): Promise<{ status: number; data: T }> =>
+    apiFetchRaw<T>(path, { method: 'POST', body: JSON.stringify(body) }),
 }

@@ -92,11 +92,17 @@ async function issueTokenPair(
   return { accessToken: signAccessToken(user, secret), refreshToken: rawRefresh }
 }
 
-/** AUTH-1: admin-only registration (OQ-3), default role viewer (D12). */
+/** AUTH-1: admin-only registration (OQ-3), default role viewer (D12). REG-ROLE: optional whitelisted role. */
 export async function register(db: Db, input: RegisterInput): Promise<PublicUser> {
   const passwordHash = await hashPassword(input.password)
+  const role = input.role ?? DEFAULT_ROLE // D-P11: default viewer; whitelist enforced by the DTO
   try {
-    const user = await authRepo.insertUserWithRole(db, { ...input, passwordHash }, DEFAULT_ROLE)
+    // Explicit fields only — `role` must never leak into the repository spread.
+    const user = await authRepo.insertUserWithRole(
+      db,
+      { username: input.username, email: input.email, password: input.password, passwordHash },
+      role,
+    )
     return toPublicUser(user)
   } catch (err) {
     if (isUniqueViolation(err)) {

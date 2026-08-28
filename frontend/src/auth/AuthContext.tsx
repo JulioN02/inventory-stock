@@ -12,7 +12,12 @@ interface AuthState {
   user: User | null
   initializing: boolean
   login: (username: string, password: string) => Promise<void>
-  register: (input: { username: string; email: string; password: string }) => Promise<void>
+  register: (input: {
+    username: string
+    email: string
+    password: string
+    role?: string
+  }) => Promise<User>
   logout: () => Promise<void>
   hasPermission: (permission: string) => boolean
 }
@@ -59,9 +64,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user)
   }
 
-  async function register(input: { username: string; email: string; password: string }): Promise<void> {
+  async function register(input: {
+    username: string
+    email: string
+    password: string
+    role?: string
+  }): Promise<User> {
     // Admin-only endpoint (OQ-3): users:create permission required server-side.
-    await api.post<{ user: User }>('/api/auth/register', input)
+    // REG-ROLE (I6): role is posted ONLY when set (default 'viewer' server-side).
+    const body: { username: string; email: string; password: string; role?: string } = {
+      username: input.username,
+      email: input.email,
+      password: input.password,
+    }
+    if (input.role) body.role = input.role
+    const data = await api.post<{ user: User }>('/api/auth/register', body)
+    return data.user
   }
 
   async function logout(): Promise<void> {
