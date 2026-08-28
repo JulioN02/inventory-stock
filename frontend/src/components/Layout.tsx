@@ -23,6 +23,12 @@ export function Layout() {
           <RoleGate permission="catalog:read">
             <NavLink to="/warehouses">Warehouses</NavLink>
           </RoleGate>
+          <RoleGate permission="movements:read">
+            <NavLink to="/movements">Movements</NavLink>
+          </RoleGate>
+          <RoleGate permission="audit:read">
+            <NavLink to="/audit">Audit</NavLink>
+          </RoleGate>
           <RoleGate permission="users:create">
             <NavLink to="/register">Register</NavLink>
           </RoleGate>

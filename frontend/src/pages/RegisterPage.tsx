@@ -3,12 +3,16 @@ import { useAuth } from '../auth/AuthContext.tsx'
 import { ApiClientError } from '../api/client.ts'
 import { RoleGate } from '../components/RoleGate.tsx'
 
-/** Admin-only registration (OQ-3) — server enforces users:create. */
+/** Mirrors the backend REGISTERABLE_ROLES whitelist (operator|viewer|auditor). */
+const REGISTERABLE_ROLES = ['operator', 'viewer', 'auditor'] as const
+
+/** Admin-only registration (OQ-3) — server enforces users:create. REG-ROLE: optional role selector. */
 export function RegisterPage() {
   const { register } = useAuth()
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [role, setRole] = useState<string>('viewer')
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -19,11 +23,12 @@ export function RegisterPage() {
     setMessage(null)
     setSubmitting(true)
     try {
-      await register({ username, email, password })
-      setMessage(`User '${username}' created (default role: viewer).`)
+      const user = await register({ username, email, password, role })
+      setMessage(`User '${user.username}' created (role: ${user.role}).`)
       setUsername('')
       setEmail('')
       setPassword('')
+      setRole('viewer')
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : 'Registration failed')
     } finally {
@@ -36,7 +41,7 @@ export function RegisterPage() {
       <div className="auth-page">
         <form className="card auth-card" onSubmit={handleSubmit}>
           <h1>Register user</h1>
-          <p className="muted">New users get the default viewer role.</p>
+          <p className="muted">New users get the viewer role by default.</p>
           {message && <div className="alert alert-success">{message}</div>}
           {error && <div className="alert alert-error">{error}</div>}
           <label>
@@ -67,6 +72,16 @@ export function RegisterPage() {
               minLength={8}
               required
             />
+          </label>
+          <label>
+            Role
+            <select value={role} onChange={(e) => setRole(e.target.value)}>
+              {REGISTERABLE_ROLES.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
           </label>
           <button type="submit" className="btn btn-primary" disabled={submitting}>
             {submitting ? 'Creating…' : 'Create user'}

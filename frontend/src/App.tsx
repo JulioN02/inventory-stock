@@ -7,6 +7,8 @@ import { RegisterPage } from './pages/RegisterPage.tsx'
 import { DashboardPage } from './pages/DashboardPage.tsx'
 import { ProductsPage } from './pages/ProductsPage.tsx'
 import { WarehousesPage } from './pages/WarehousesPage.tsx'
+import { MovementsPage } from './pages/MovementsPage.tsx'
+import { AuditPage } from './pages/AuditPage.tsx'
 
 export function App() {
   return (
@@ -42,6 +44,22 @@ export function App() {
           element={
             <RoleGate permission="catalog:read" fallback={<Navigate to="/" replace />}>
               <WarehousesPage />
+            </RoleGate>
+          }
+        />
+        <Route
+          path="movements"
+          element={
+            <RoleGate permission="movements:read" fallback={<Navigate to="/" replace />}>
+              <MovementsPage />
+            </RoleGate>
+          }
+        />
+        <Route
+          path="audit"
+          element={
+            <RoleGate permission="audit:read" fallback={<Navigate to="/" replace />}>
+              <AuditPage />
             </RoleGate>
           }
         />

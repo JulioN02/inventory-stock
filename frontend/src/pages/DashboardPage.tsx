@@ -30,6 +30,18 @@ export function DashboardPage() {
           <h2>Warehouses</h2>
           <p>Physical locations holding stock.</p>
         </Link>
+        <RoleGate permission="movements:read">
+          <Link className="card" to="/movements">
+            <h2>Movements</h2>
+            <p>Register receiving/sale, transfers and adjustments; view the ledger.</p>
+          </Link>
+        </RoleGate>
+        <RoleGate permission="audit:read">
+          <Link className="card" to="/audit">
+            <h2>Audit</h2>
+            <p>Read-only trail of every recorded event.</p>
+          </Link>
+        </RoleGate>
       </div>
 
       <RoleGate

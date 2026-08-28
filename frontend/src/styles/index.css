@@ -231,3 +231,24 @@ select {
   text-align: center;
   color: var(--muted);
 }
+
+/* I6: audit payload collapse — bounded, scrollable, wraps long lines. */
+.table details pre {
+  max-width: 340px;
+  max-height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #fafbfc;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  margin: 0.4rem 0 0;
+}
+
+.table details summary {
+  cursor: pointer;
+  color: var(--primary);
+  font-size: 0.85rem;
+}
