@@ -24,16 +24,16 @@
       <span id="nav-label" class="visually-hidden" data-i18n="topbar.navLabel">Navegación</span>
       <a href="#overview" data-i18n="nav.overview">Descripción</a>
       <a href="#features" data-i18n="nav.features">Funciones</a>
-      <a href="#fundamentals" data-i18n="nav.fundamentals">Fundamentos</a>
+      <a href="#fundamentals" data-i18n="nav.fundamentals">Fundamentos aplicados</a>
       <a href="#architecture" data-i18n="nav.architecture">Arquitectura</a>
       <a href="#stack" data-i18n="nav.stack">Stack</a>
       <a href="#modules" data-i18n="nav.modules">Módulos</a>
       <a href="#data-model" data-i18n="nav.dataModel">Modelo de datos</a>
       <a href="#api" data-i18n="nav.api">API</a>
       <a href="#run" data-i18n="nav.run">Cómo correr</a>
+      <a href="#repo" data-i18n="nav.repo">Obtener el código</a>
+      <a href="#guide" data-i18n="nav.guide">Guía de uso</a>
       <a href="#tests" data-i18n="nav.tests">Tests</a>
-      <a href="#labs" data-i18n="nav.labs">Labs</a>
-      <a href="#screenshots" data-i18n="nav.screenshots">Capturas</a>
     </nav>
     <div class="locale-toggle" role="group" aria-labelledby="locale-label">
       <span id="locale-label" class="visually-hidden" data-i18n="topbar.localeLabel">Idioma</span>
@@ -84,15 +84,15 @@
         </article>
         <article class="card">
           <h3 data-i18n="features.card2.title">Consistencia</h3>
-          <p data-i18n="features.card2.body">Invariantes de stock bajo concurrencia; imposible vender stock inexistente (LAB-01).</p>
+          <p data-i18n="features.card2.body">Invariantes de stock bajo concurrencia; imposible vender stock inexistente.</p>
         </article>
         <article class="card">
           <h3 data-i18n="features.card3.title">Idempotencia</h3>
-          <p data-i18n="features.card3.body">Reintentos seguros sin efectos duplicados mediante claves de idempotencia (LAB-02).</p>
+          <p data-i18n="features.card3.body">Reintentos seguros sin efectos duplicados mediante claves de idempotencia.</p>
         </article>
         <article class="card">
           <h3 data-i18n="features.card4.title">Auditoría</h3>
-          <p data-i18n="features.card4.body">Quién, cuándo y qué cambió, de forma inmutable y append-only (LAB-08).</p>
+          <p data-i18n="features.card4.body">Quién, cuándo y qué cambió, de forma inmutable y append-only.</p>
         </article>
         <article class="card">
           <h3 data-i18n="features.card5.title">SQL</h3>
@@ -105,10 +105,10 @@
       </div>
     </section>
 
-    <!-- P4 · Fundamentos -->
+    <!-- P4 · Fundamentos aplicados -->
     <section id="fundamentals" aria-labelledby="fundamentals-title">
-      <h2 id="fundamentals-title" data-i18n="fundamentals.title">Fundamentos</h2>
-      <p class="lead" data-i18n="fundamentals.lead">Las reglas de dominio que sostienen el sistema.</p>
+      <h2 id="fundamentals-title" data-i18n="fundamentals.title">Fundamentos aplicados</h2>
+      <p class="lead" data-i18n="fundamentals.lead">Los principios que sostienen la consistencia del dominio.</p>
       <ul class="checklist">
         <li data-i18n-html="fundamentals.item1">Libro mayor inmutable: los movimientos nunca se editan ni se borran.</li>
         <li data-i18n-html="fundamentals.item2">Cada movimiento es una fila con <code>quantity &gt; 0</code> y un <code>sign</code> de ±1.</li>
@@ -117,6 +117,20 @@
         <li data-i18n-html="fundamentals.item5">Idempotencia con <code>idempotency_key</code> + <code>request_hash</code> canónico (SHA-256): un reintento devuelve 200 y una operación nueva, 201.</li>
         <li data-i18n-html="fundamentals.item6">La auditoría append-only se garantiza con el trigger de base de datos <code>forbid_ledger_mutation</code>.</li>
       </ul>
+      <div class="card-grid">
+        <article class="card">
+          <h3 data-i18n="fundamentals.f1.title">Consistencia bajo concurrencia</h3>
+          <p data-i18n="fundamentals.f1.body">El advisory lock por producto y almacén impide vender stock inexistente cuando hay operaciones simultáneas.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="fundamentals.f2.title">Idempotencia</h3>
+          <p data-i18n="fundamentals.f2.body">La clave de idempotencia y el hash del request detectan reintentos y evitan efectos duplicados.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="fundamentals.f3.title">Auditoría inmutable</h3>
+          <p data-i18n="fundamentals.f3.body">El trigger de base de datos rechaza cualquier mutación del libro mayor y del log de auditoría.</p>
+        </article>
+      </div>
     </section>
 
     <!-- P5 · Arquitectura -->
@@ -268,6 +282,111 @@ npm run typecheck</pre>
       <p data-i18n-html="run.note">Copia <code>backend/.env.example</code> a <code>backend/.env</code> antes de correr el backend.</p>
     </section>
 
+    <!-- P10b · Obtener el código -->
+    <section id="repo" aria-labelledby="repo-title">
+      <h2 id="repo-title" data-i18n="repo.title">Obtener el código</h2>
+      <p class="lead" data-i18n="repo.lead">El proyecto vive en GitHub y hay dos formas de llevártelo.</p>
+      <div class="card-grid">
+        <article class="card">
+          <h3 data-i18n="repo.clone.title">Git clone</h3>
+          <p data-i18n="repo.clone.body">Con Git instalado, copia el repositorio con SSH o HTTPS:</p>
+          <pre class="commands" data-i18n-html="repo.clone.command"># SSH
+git clone git@github.com:JulioN02/inventory-stock.git
+# HTTPS (alternativa)
+git clone https://github.com/JulioN02/inventory-stock.git</pre>
+        </article>
+        <article class="card">
+          <h3 data-i18n="repo.zip.title">Descargar ZIP</h3>
+          <p data-i18n-html="repo.zip.body">Sin Git: abre la página del repositorio, pulsa el botón verde <strong>Code</strong> y elige <strong>Download ZIP</strong>.</p>
+        </article>
+      </div>
+      <h3 data-i18n="repo.contents.title">Qué obtienes</h3>
+      <ul class="checklist" data-i18n-html="repo.contents.items">
+        <li><code>backend/</code> — API Express 5 + TypeScript, con tests</li>
+        <li><code>frontend/</code> — SPA React 19 + Vite</li>
+        <li><code>docker-compose.yml</code> — PostgreSQL 16 lista para levantar</li>
+        <li>npm workspaces — un solo comando instala todo</li>
+      </ul>
+      <p data-i18n-html="repo.url">Repositorio: <a href="https://github.com/JulioN02/inventory-stock" target="_blank" rel="noopener">github.com/JulioN02/inventory-stock</a></p>
+      <p>
+        <a class="btn btn-primary" href="https://github.com/JulioN02/inventory-stock" target="_blank" rel="noopener" data-i18n="repo.link">Abrir el repositorio</a>
+      </p>
+    </section>
+
+    <!-- P10c · Guía de uso -->
+    <section id="guide" aria-labelledby="guide-title">
+      <h2 id="guide-title" data-i18n="guide.title">Guía de uso</h2>
+      <p class="lead" data-i18n="guide.lead">Cómo usar cada módulo, explicado sin tecnicismos.</p>
+      <div class="card-grid guide-grid">
+        <article class="card">
+          <h3 data-i18n="guide.auth.title">Auth / Roles</h3>
+          <p class="card-label" data-i18n="guide.whatIs">Qué es</p>
+          <p data-i18n="guide.auth.what">El control de acceso con roles. Un administrador da de alta a los usuarios y cada rol define lo que se puede hacer.</p>
+          <p class="card-label" data-i18n="guide.howToUse">Cómo usarlo</p>
+          <ol class="steps" data-i18n-html="guide.auth.steps">
+            <li>Entra como <code>admin</code> con la contraseña <code>ADMIN_PASSWORD</code> de <code>backend/.env</code>.</li>
+            <li>Crea usuarios: solo el admin puede registrar; al hacerlo, elige el rol del nuevo usuario.</li>
+            <li>Roles: <strong>admin</strong> (control total), <strong>operator</strong> (gestiona catálogo y movimientos), <strong>viewer</strong> (solo lectura) y <strong>auditor</strong> (solo lectura + log de auditoría).</li>
+          </ol>
+        </article>
+        <article class="card">
+          <h3 data-i18n="guide.products.title">Products (Catálogo)</h3>
+          <p class="card-label" data-i18n="guide.whatIs">Qué es</p>
+          <p data-i18n="guide.products.what">El catálogo de productos que se compran, venden o almacenan.</p>
+          <p class="card-label" data-i18n="guide.howToUse">Cómo usarlo</p>
+          <ol class="steps" data-i18n-html="guide.products.steps">
+            <li>Crea un producto con nombre, unidad y precio; el SKU se pasa solo a mayúsculas.</li>
+            <li>Busca por texto, por nombre o SKU.</li>
+            <li>Desactiva en lugar de borrar: así se conserva el historial de movimientos.</li>
+          </ol>
+        </article>
+        <article class="card">
+          <h3 data-i18n="guide.warehouses.title">Warehouses (Almacenes)</h3>
+          <p class="card-label" data-i18n="guide.whatIs">Qué es</p>
+          <p data-i18n="guide.warehouses.what">Las ubicaciones físicas donde se guarda el stock.</p>
+          <p class="card-label" data-i18n="guide.howToUse">Cómo usarlo</p>
+          <ol class="steps" data-i18n-html="guide.warehouses.steps">
+            <li>Crea un almacén con nombre y código.</li>
+            <li>Desactívalo si deja de usarse; tampoco se borra.</li>
+          </ol>
+        </article>
+        <article class="card">
+          <h3 data-i18n="guide.movements.title">Movements (Movimientos)</h3>
+          <p class="card-label" data-i18n="guide.whatIs">Qué es</p>
+          <p data-i18n="guide.movements.what">El libro mayor inmutable: cada movimiento suma o resta stock y nunca se edita ni se borra.</p>
+          <p class="card-label" data-i18n="guide.howToUse">Cómo usarlo</p>
+          <ol class="steps" data-i18n-html="guide.movements.steps">
+            <li><strong>Recepción o venta:</strong> elige producto y almacén, escribe la cantidad y guarda. La recepción suma stock (+) y la venta lo resta (−).</li>
+            <li><strong>Traslado:</strong> mueve stock entre almacenes: sale del origen y entra en el destino en una sola operación atómica. No se puede trasladar al mismo almacén.</li>
+            <li><strong>Ajuste:</strong> la única vía de corrección (merma, sobrante, error de conteo o daño); la razón es obligatoria.</li>
+            <li><strong>Leer el libro mayor:</strong> filtra por tipo, producto o almacén. Las columnas <em>Stock inicial</em> y <em>Stock final</em> muestran el saldo acumulado en cada movimiento.</li>
+          </ol>
+        </article>
+        <article class="card">
+          <h3 data-i18n="guide.stock.title">Stock (Dashboard)</h3>
+          <p class="card-label" data-i18n="guide.whatIs">Qué es</p>
+          <p data-i18n="guide.stock.what">El estado derivado por producto y almacén. No se guarda en ninguna tabla: se calcula desde los movimientos.</p>
+          <p class="card-label" data-i18n="guide.howToUse">Cómo usarlo</p>
+          <ol class="steps" data-i18n-html="guide.stock.steps">
+            <li>Filtra por almacén para ver el stock de una ubicación concreta.</li>
+            <li>Stock bajo: el umbral por defecto es 5; por debajo de ese valor, el producto aparece como bajo stock.</li>
+          </ol>
+        </article>
+        <article class="card">
+          <h3 data-i18n="guide.audit.title">Audit (Auditoría)</h3>
+          <p class="card-label" data-i18n="guide.whatIs">Qué es</p>
+          <p data-i18n="guide.audit.what">Un registro de solo lectura: quién hizo qué y cuándo (logins, cambios de productos, movimientos y almacenes). Es append-only: no se puede modificar ni borrar.</p>
+          <p class="card-label" data-i18n="guide.howToUse">Cómo usarlo</p>
+          <ol class="steps" data-i18n-html="guide.audit.steps">
+            <li><strong>Tipo de actor:</strong> <code>user</code> (persona), <code>system</code> (proceso automático) o <code>anonymous</code> (sin sesión).</li>
+            <li><strong>Acción y entidad:</strong> el evento registrado y el objeto afectado.</li>
+            <li><strong>Payload:</strong> el detalle del cambio en JSON, ampliable.</li>
+            <li><strong>IP y user agent:</strong> el origen de la solicitud.</li>
+          </ol>
+        </article>
+      </div>
+    </section>
+
     <!-- P11 · Tests -->
     <section id="tests" aria-labelledby="tests-title">
       <h2 id="tests-title" data-i18n="tests.title">Tests</h2>
@@ -278,84 +397,6 @@ npm run typecheck</pre>
         <li data-i18n="tests.item2">Typecheck limpio con TypeScript estricto.</li>
         <li data-i18n="tests.item3">Sin tests automatizados de frontend: decisión documentada, verificada con typecheck y E2E manual.</li>
       </ul>
-    </section>
-
-    <!-- P12 · Labs -->
-    <section id="labs" aria-labelledby="labs-title">
-      <h2 id="labs-title" data-i18n="labs.title">Labs</h2>
-      <p class="lead" data-i18n="labs.lead">Los ejercicios que dieron forma al sistema.</p>
-      <div class="card-grid">
-        <article class="card">
-          <h3 data-i18n="labs.lab1.title">LAB-01 · Race Condition</h3>
-          <p data-i18n="labs.lab1.body">Consistencia de stock bajo concurrencia: el advisory lock por producto y almacén impide vender stock inexistente.</p>
-        </article>
-        <article class="card">
-          <h3 data-i18n="labs.lab2.title">LAB-02 · Idempotency</h3>
-          <p data-i18n="labs.lab2.body">Operaciones repetidas sin efectos duplicados: la clave de idempotencia y el hash del request detectan reintentos.</p>
-        </article>
-        <article class="card">
-          <h3 data-i18n="labs.lab8.title">LAB-08 · Audit Trail</h3>
-          <p data-i18n="labs.lab8.body">Auditoría inmutable: el trigger de base de datos rechaza cualquier mutación del libro mayor y del log de auditoría.</p>
-        </article>
-      </div>
-    </section>
-
-    <!-- S1 · Screenshots -->
-    <section id="screenshots" aria-labelledby="screenshots-title">
-      <h2 id="screenshots-title" data-i18n="screenshots.title">Capturas</h2>
-      <p class="lead" data-i18n="screenshots.lead">Recorrido visual de la aplicación.</p>
-      <p class="muted" data-i18n="screenshots.note">Imágenes pendientes: los marcadores se reemplazan por capturas reales siguiendo la convención documentada.</p>
-      <div class="shot-grid">
-        <figure class="shot">
-          <div class="shot-placeholder" role="img" aria-labelledby="shot-dashboard-label">
-            <span class="shot-label" id="shot-dashboard-label" data-i18n="screenshots.cap.dashboard">Panel</span>
-            <span class="shot-filename">screenshots/dashboard-es.png</span>
-          </div>
-          <figcaption data-i18n="screenshots.cap.dashboard">Panel</figcaption>
-        </figure>
-        <figure class="shot">
-          <div class="shot-placeholder" role="img" aria-labelledby="shot-products-label">
-            <span class="shot-label" id="shot-products-label" data-i18n="screenshots.cap.products">Productos</span>
-            <span class="shot-filename">screenshots/products-es.png</span>
-          </div>
-          <figcaption data-i18n="screenshots.cap.products">Productos</figcaption>
-        </figure>
-        <figure class="shot">
-          <div class="shot-placeholder" role="img" aria-labelledby="shot-warehouses-label">
-            <span class="shot-label" id="shot-warehouses-label" data-i18n="screenshots.cap.warehouses">Almacenes</span>
-            <span class="shot-filename">screenshots/warehouses-es.png</span>
-          </div>
-          <figcaption data-i18n="screenshots.cap.warehouses">Almacenes</figcaption>
-        </figure>
-        <figure class="shot">
-          <div class="shot-placeholder" role="img" aria-labelledby="shot-movements-label">
-            <span class="shot-label" id="shot-movements-label" data-i18n="screenshots.cap.movements">Movimientos</span>
-            <span class="shot-filename">screenshots/movements-es.png</span>
-          </div>
-          <figcaption data-i18n="screenshots.cap.movements">Movimientos</figcaption>
-        </figure>
-        <figure class="shot">
-          <div class="shot-placeholder" role="img" aria-labelledby="shot-audit-label">
-            <span class="shot-label" id="shot-audit-label" data-i18n="screenshots.cap.audit">Auditoría</span>
-            <span class="shot-filename">screenshots/audit-es.png</span>
-          </div>
-          <figcaption data-i18n="screenshots.cap.audit">Auditoría</figcaption>
-        </figure>
-        <figure class="shot">
-          <div class="shot-placeholder" role="img" aria-labelledby="shot-login-label">
-            <span class="shot-label" id="shot-login-label" data-i18n="screenshots.cap.login">Inicio de sesión</span>
-            <span class="shot-filename">screenshots/login-es.png</span>
-          </div>
-          <figcaption data-i18n="screenshots.cap.login">Inicio de sesión</figcaption>
-        </figure>
-        <figure class="shot">
-          <div class="shot-placeholder" role="img" aria-labelledby="shot-register-label">
-            <span class="shot-label" id="shot-register-label" data-i18n="screenshots.cap.register">Registro</span>
-            <span class="shot-filename">screenshots/register-es.png</span>
-          </div>
-          <figcaption data-i18n="screenshots.cap.register">Registro</figcaption>
-        </figure>
-      </div>
     </section>
 
   </main>

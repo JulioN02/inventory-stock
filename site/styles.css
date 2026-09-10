@@ -347,7 +347,7 @@ main section > h2 {
   white-space: pre;
 }
 
-/* ── Cards (P3, P6, P12) ───────────────────────────────────────────────── */
+/* ── Cards (P3, P4, P6) ───────────────────────────────────────────────── */
 
 .card-grid {
   display: grid;
@@ -366,6 +366,35 @@ main section > h2 {
 }
 
 .card p:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Guide cards (P10c) ───────────────────────────────────────────────── */
+
+.guide-grid {
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+}
+
+.card-label {
+  margin: 0 0 var(--space-1);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.steps {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.steps li {
+  margin-bottom: var(--space-2);
+  overflow-wrap: anywhere;
+}
+
+.steps li:last-child {
   margin-bottom: 0;
 }
 
@@ -493,52 +522,6 @@ code {
   margin: var(--space-2) 0 var(--space-4);
 }
 
-/* ── Screenshots (S1) ──────────────────────────────────────────────────── */
-
-.shot-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: var(--space-4);
-  margin-top: var(--space-4);
-}
-
-.shot {
-  min-width: 0;
-  margin: 0;
-}
-
-.shot-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  aspect-ratio: 16 / 10;
-  padding: var(--space-4);
-  text-align: center;
-  background: var(--muted-bg);
-  border: 2px dashed var(--border-strong);
-  border-radius: var(--radius-lg);
-}
-
-.shot-label {
-  font-weight: 600;
-  color: var(--text);
-}
-
-.shot-filename {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.78rem;
-  color: var(--muted);
-  overflow-wrap: anywhere;
-}
-
-.shot figcaption {
-  margin-top: var(--space-2);
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
 /* ── Footer (P13) ──────────────────────────────────────────────────────── */
 
 .footer {
@@ -603,8 +586,7 @@ code {
   }
 
   .card-grid,
-  .flow-grid,
-  .shot-grid {
+  .flow-grid {
     grid-template-columns: 1fr;
   }
 
@@ -641,13 +623,8 @@ code {
 
   .card,
   .flow-figure,
-  .table-wrap,
-  .shot-placeholder {
+  .table-wrap {
     box-shadow: none;
-  }
-
-  .shot-placeholder {
-    border-style: solid;
   }
 
   a {
