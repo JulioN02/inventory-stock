@@ -44,6 +44,7 @@ async function seedStock(opts?: { sku?: string; whCode?: string; quantity?: stri
 
 const KEY_B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
 const KEY_C = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+const KEY_D = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
 
 test('MOV-4: GET /api/stock derives the SUM per product+warehouse (string numerics, scale 1)', async () => {
   const { token, productId, warehouseId } = await seedStock()
@@ -226,4 +227,165 @@ test('AUTH-6: stock/movements reads require movements:read (viewer ok, auditor 4
   const viewerToken = await loginAndGetToken(ctx.app, 'viewer2', 'Viewer123')
   const allowed = await request(ctx.app).get('/api/stock').set('Authorization', `Bearer ${viewerToken}`)
   assert.equal(allowed.status, 200, 'viewer has movements:read')
+})
+
+// ── MOV-TRACE: running balance per ledger row ────────────────────────────────
+// Receiving 5 → sale 2 → adjustment +1 (ledger order). Display order is
+// (occurred_at DESC, id DESC), so the newest row comes first.
+
+const KEY_ADJUST = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+
+async function seedTraceHistory(): Promise<{ token: string; productId: string; warehouseId: string }> {
+  const token = await operatorToken()
+  const productId = await createProduct(ctx.app, token, 'SKU-TRACE')
+  const warehouseId = await createWarehouse(ctx.app, token, 'WH-TRACE')
+  await registerMovement(ctx.app, token, {
+    product_id: productId,
+    warehouse_id: warehouseId,
+    quantity: '5.0',
+    type: 'receiving',
+    idempotency_key: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  })
+  await registerMovement(ctx.app, token, {
+    product_id: productId,
+    warehouse_id: warehouseId,
+    quantity: '2.0',
+    type: 'sale',
+    idempotency_key: KEY_B,
+  })
+  await request(ctx.app)
+    .post('/api/movements/adjustments')
+    .set('Authorization', `Bearer ${token}`)
+    .send({
+      product_id: productId,
+      warehouse_id: warehouseId,
+      quantity: '1.0',
+      reason: 'count correction',
+      idempotency_key: KEY_ADJUST,
+    })
+  return { token, productId, warehouseId }
+}
+
+function findLedgerRow(items: Array<Record<string, unknown>>, type: string): Record<string, unknown> {
+  const row = items.find((item) => item.type === type)
+  assert.ok(row, `${type} row present`)
+  return row
+}
+
+test('MOV-TRACE: receiving 5 → sale 2 → adjustment +1 → per-row stock_before/stock_after (strings, full ledger)', async () => {
+  const { token } = await seedTraceHistory()
+  const res = await request(ctx.app).get('/api/movements').set('Authorization', `Bearer ${token}`)
+  assert.equal(res.status, 200)
+  const items = res.body.items as Array<Record<string, unknown>>
+  assert.equal(items.length, 3)
+
+  // Display order: adjustment (newest), sale, receiving (oldest).
+  assert.equal(items[0]!.type, 'adjustment')
+  assert.equal(items[1]!.type, 'sale')
+  assert.equal(items[2]!.type, 'receiving')
+
+  const receiving = findLedgerRow(items, 'receiving')
+  assert.equal(receiving.stock_before, '0')
+  assert.equal(receiving.stock_after, '5.0')
+
+  const sale = findLedgerRow(items, 'sale')
+  assert.equal(sale.stock_before, '5.0')
+  assert.equal(sale.stock_after, '3.0')
+
+  const adjustment = findLedgerRow(items, 'adjustment')
+  assert.equal(adjustment.stock_before, '3.0')
+  assert.equal(adjustment.stock_after, '4.0')
+
+  for (const row of items) {
+    assert.equal(typeof row.stock_before, 'string', 'stock_before serialized as string (D13)')
+    assert.equal(typeof row.stock_after, 'string', 'stock_after serialized as string (D13)')
+  }
+})
+
+test('MOV-TRACE: type filter keeps full-history balances (sale row still 5.0 → 3.0)', async () => {
+  const { token } = await seedTraceHistory()
+  const res = await request(ctx.app)
+    .get('/api/movements?type=sale')
+    .set('Authorization', `Bearer ${token}`)
+  assert.equal(res.status, 200)
+  const items = res.body.items as Array<Record<string, unknown>>
+  assert.equal(items.length, 1)
+  assert.equal(items[0]!.type, 'sale')
+  assert.equal(items[0]!.stock_before, '5.0')
+  assert.equal(items[0]!.stock_after, '3.0')
+})
+
+test('MOV-TRACE: pagination keeps full-ledger balances (page 2 oldest derives from outside the page)', async () => {
+  const { token } = await seedTraceHistory()
+  // Full unfiltered ledger for cross-check.
+  const all = await request(ctx.app).get('/api/movements').set('Authorization', `Bearer ${token}`)
+  const allItems = all.body.items as Array<Record<string, unknown>>
+
+  const page1 = await request(ctx.app)
+    .get('/api/movements?page=1&pageSize=2')
+    .set('Authorization', `Bearer ${token}`)
+  assert.equal(page1.status, 200)
+  const p1 = page1.body.items as Array<Record<string, unknown>>
+  assert.equal(p1.length, 2)
+  for (const row of p1) {
+    const full = allItems.find((item) => item.id === row.id)
+    assert.ok(full, 'page-1 row exists in full ledger')
+    assert.equal(row.stock_before, full.stock_before, 'page-1 stock_before matches full ledger')
+    assert.equal(row.stock_after, full.stock_after, 'page-1 stock_after matches full ledger')
+  }
+
+  const page2 = await request(ctx.app)
+    .get('/api/movements?page=2&pageSize=2')
+    .set('Authorization', `Bearer ${token}`)
+  assert.equal(page2.status, 200)
+  const p2 = page2.body.items as Array<Record<string, unknown>>
+  assert.equal(p2.length, 1, 'page 2 holds the oldest row')
+  const oldest = p2[0]!
+  assert.equal(oldest.type, 'receiving')
+  assert.equal(oldest.stock_before, '0', 'before comes from history outside the page (nothing precedes it)')
+  assert.equal(oldest.stock_after, '5.0')
+})
+
+test('MOV-TRACE: transfer rows carry their own per-warehouse balance (W1 5→2, W2 1→4)', async () => {
+  const token = await operatorToken()
+  const productId = await createProduct(ctx.app, token, 'SKU-XTRACE')
+  const w1 = await createWarehouse(ctx.app, token, 'WH-T1')
+  const w2 = await createWarehouse(ctx.app, token, 'WH-T2')
+  await registerMovement(ctx.app, token, {
+    product_id: productId,
+    warehouse_id: w1,
+    quantity: '5.0',
+    type: 'receiving',
+    idempotency_key: KEY_B,
+  })
+  await registerMovement(ctx.app, token, {
+    product_id: productId,
+    warehouse_id: w2,
+    quantity: '1.0',
+    type: 'receiving',
+    idempotency_key: KEY_C,
+  })
+  const transfer = await request(ctx.app)
+    .post('/api/movements/transfers')
+    .set('Authorization', `Bearer ${token}`)
+    .send({
+      product_id: productId,
+      source_warehouse_id: w1,
+      destination_warehouse_id: w2,
+      quantity: '3.0',
+      idempotency_key: KEY_D,
+    })
+  assert.equal(transfer.status, 201)
+
+  const res = await request(ctx.app).get('/api/movements').set('Authorization', `Bearer ${token}`)
+  assert.equal(res.status, 200)
+  const items = res.body.items as Array<Record<string, unknown>>
+  const out = findLedgerRow(items, 'transfer_out')
+  const inn = findLedgerRow(items, 'transfer_in')
+  assert.equal(out.warehouse_id, w1)
+  assert.equal(out.stock_before, '5.0')
+  assert.equal(out.stock_after, '2.0', 'W1 balance after moving 3 of 5')
+  assert.equal(inn.warehouse_id, w2)
+  assert.equal(inn.stock_before, '1.0')
+  assert.equal(inn.stock_after, '4.0', 'W2 balance after receiving 3 onto 1')
 })

@@ -6,7 +6,7 @@ import { EmptyState } from '../components/EmptyState.tsx'
 import { LoadingIndicator } from '../components/LoadingIndicator.tsx'
 import { RoleGate } from '../components/RoleGate.tsx'
 import { formatNumber, localizeError, localizeRole, useTranslation } from '../i18n/index.ts'
-import type { LowStockItem, StockItem } from '../types.ts'
+import type { LowStockItem, StockItem, Warehouse } from '../types.ts'
 
 const LOW_STOCK_THRESHOLD = 5
 
@@ -65,6 +65,8 @@ function StockSection() {
   const { t, locale } = useTranslation()
   const [stock, setStock] = useState<StockItem[]>([])
   const [low, setLow] = useState<LowStockItem[]>([])
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([])
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState('') // '' = all
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -72,9 +74,17 @@ function StockSection() {
     setLoading(true)
     setError(null)
     try {
+      // DASH-FILTER: append warehouse_id when a specific warehouse is selected;
+      // omit the parameter entirely for "all" (backend defaults to the full matrix).
+      // NOTE: /api/stock has no query string yet (needs `?`); /api/stock/low
+      // already has ?threshold=5 (needs `&`).
+      const stockParam = selectedWarehouseId === '' ? '' : `?warehouse_id=${selectedWarehouseId}`
+      const lowParam = selectedWarehouseId === '' ? '' : `&warehouse_id=${selectedWarehouseId}`
       const [stockData, lowData] = await Promise.all([
-        api.get<{ items: StockItem[] }>('/api/stock'),
-        api.get<{ items: LowStockItem[] }>(`/api/stock/low?threshold=${LOW_STOCK_THRESHOLD}`),
+        api.get<{ items: StockItem[] }>(`/api/stock${stockParam}`),
+        api.get<{ items: LowStockItem[] }>(
+          `/api/stock/low?threshold=${LOW_STOCK_THRESHOLD}${lowParam}`,
+        ),
       ])
       setStock(stockData.items)
       setLow(lowData.items)
@@ -87,6 +97,15 @@ function StockSection() {
 
   useEffect(() => {
     void load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedWarehouseId])
+
+  useEffect(() => {
+    // Warehouse dropdown options load ONCE (D-P4 pattern, same as MovementsPage).
+    api
+      .get<{ items: Warehouse[] }>('/api/warehouses?pageSize=100')
+      .then((data) => setWarehouses(data.items))
+      .catch((err: unknown) => setError(localizeError(err, t)))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -101,6 +120,23 @@ function StockSection() {
       )}
 
       <h2>{t('dashboard.stockLevels')}</h2>
+      <div className="toolbar">
+        <label className="muted small" htmlFor="dashboard-warehouse-filter">
+          {t('dashboard.filter.warehouse')}
+        </label>
+        <select
+          id="dashboard-warehouse-filter"
+          value={selectedWarehouseId}
+          onChange={(e) => setSelectedWarehouseId(e.target.value)}
+        >
+          <option value="">{t('dashboard.filter.warehouseAll')}</option>
+          {warehouses.map((warehouse) => (
+            <option key={warehouse.id} value={warehouse.id}>
+              {warehouse.code} — {warehouse.name}
+            </option>
+          ))}
+        </select>
+      </div>
       <p className="muted small">{t('dashboard.stockNote')}</p>
       <div className="table-wrap">
         <table className="table">
@@ -130,6 +166,9 @@ function StockSection() {
       </div>
 
       <h2>{t('dashboard.lowStock', { threshold: LOW_STOCK_THRESHOLD })}</h2>
+      {selectedWarehouseId !== '' && (
+        <p className="muted small">{t('dashboard.filter.lowStockNote')}</p>
+      )}
       <div className="table-wrap">
         <table className="table">
           <thead>

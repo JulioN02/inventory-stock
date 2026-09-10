@@ -325,10 +325,20 @@ export async function adjust(
 export interface MovementListItemDto extends MovementDto {
   sku: string
   warehouse_code: string
+  /** MOV-TRACE: running balance before this row, full-ledger (string numeric). */
+  stock_before: string
+  /** MOV-TRACE: running balance after this row, full-ledger (string numeric). */
+  stock_after: string
 }
 
 function toMovementListItemDto(row: MovementListRecord): MovementListItemDto {
-  return { ...toMovementDto(row), sku: row.sku, warehouse_code: row.warehouse_code }
+  return {
+    ...toMovementDto(row),
+    sku: row.sku,
+    warehouse_code: row.warehouse_code,
+    stock_before: row.stock_before,
+    stock_after: row.stock_after,
+  }
 }
 
 /** OQ-2: ledger list with filters + pagination. */

@@ -36,6 +36,10 @@ export interface MovementInsertInput {
 export interface MovementListRecord extends MovementRecord {
   sku: string
   warehouse_code: string
+  /** MOV-TRACE: running balance BEFORE this row, over the FULL ledger. */
+  stock_before: string
+  /** MOV-TRACE: running balance AFTER this row, over the FULL ledger. */
+  stock_after: string
 }
 
 export interface MovementListResult {
@@ -214,8 +218,21 @@ export async function listMovements(
     values,
   )
   const data = await db.query(
-    `SELECT m.*, p.sku, w.code AS warehouse_code
-     FROM movements m
+    `WITH ledger AS (
+       SELECT m.*,
+              SUM(m.quantity * m.sign) OVER (
+                PARTITION BY m.product_id, m.warehouse_id
+                ORDER BY m.occurred_at, m.id
+                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+              ) AS running_total
+       FROM movements m
+     )
+     SELECT m.*, p.sku, w.code AS warehouse_code,
+            CASE WHEN m.running_total - m.quantity * m.sign = 0 THEN '0'
+                 ELSE (m.running_total - m.quantity * m.sign)::text END AS stock_before,
+            CASE WHEN m.running_total = 0 THEN '0'
+                 ELSE m.running_total::text END AS stock_after
+     FROM ledger m
      JOIN products p ON p.id = m.product_id
      JOIN warehouses w ON w.id = m.warehouse_id
      ${whereSql}

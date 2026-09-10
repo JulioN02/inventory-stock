@@ -101,6 +101,10 @@ export const en = {
   'dashboard.lowStock': 'Low stock (below {threshold})',
   'dashboard.nothingBelow': 'Nothing below the threshold.',
   'dashboard.empty': 'No stock recorded',
+  'dashboard.filter.warehouse': 'Warehouse',
+  'dashboard.filter.warehouseAll': 'Warehouse: all',
+  'dashboard.filter.lowStockNote':
+    'Low stock shows products whose balance in THIS warehouse is below the threshold.',
   'dashboard.headers.sku': 'SKU',
   'dashboard.headers.product': 'Product',
   'dashboard.headers.warehouse': 'Warehouse',
@@ -162,6 +166,8 @@ export const en = {
   'movements.headers.warehouse': 'Warehouse',
   'movements.headers.quantity': 'Quantity',
   'movements.headers.sign': 'Sign',
+  'movements.headers.stockBefore': 'Opening stock',
+  'movements.headers.stockAfter': 'Closing stock',
   'movements.headers.unitPrice': 'Unit price',
   'movements.headers.reference': 'Reference',
   'movements.headers.operationGroup': 'Operation group',
@@ -189,6 +195,9 @@ export const en = {
   'movements.validation.sameWarehouse': 'Source and destination warehouses must be different.',
   'movements.submitFailed': 'Failed to register the movement',
   'movements.empty': 'No movements',
+  'movements.help.adjustment.summary': 'What is an adjustment for?',
+  'movements.help.adjustment.body':
+    'Use adjustments to correct stock without editing the ledger: count errors (corrections), shrinkage, surplus or damage. The ledger is immutable (append-only), so adjustments are the only correction path. In the table, "Opening stock" and "Closing stock" show the accumulated balance for the product in that warehouse before and after the row, computed over the full history — not just the filtered rows.',
 
   // ── audit ─────────────────────────────────────────────────────────────
   'audit.title': 'Audit',
@@ -211,4 +220,7 @@ export const en = {
   'audit.headers.userAgent': 'User agent',
   'audit.payloadSummary': 'payload',
   'audit.empty': 'No audit records',
+  'audit.help.summary': 'How to read the audit log?',
+  'audit.help.body':
+    'Each row is an immutable event (append-only), written in the same transaction as the operation: if the operation is rolled back, the row disappears. Actor type: user (person), system (automated process) or anonymous (no session). Action: event code (e.g. movements.adjustment.create). Entity / entity ID: the affected object. Payload: JSON of the change. IP and User agent: request origin.',
 } satisfies Dictionary

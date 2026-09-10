@@ -102,6 +102,10 @@ export const es = {
   'dashboard.lowStock': 'Stock bajo (por debajo de {threshold})',
   'dashboard.nothingBelow': 'Nada por debajo del umbral.',
   'dashboard.empty': 'Sin stock registrado',
+  'dashboard.filter.warehouse': 'Almacén',
+  'dashboard.filter.warehouseAll': 'Almacén: todos',
+  'dashboard.filter.lowStockNote':
+    'Stock bajo muestra los productos cuyo saldo en ESTE almacén está por debajo del umbral.',
   'dashboard.headers.sku': 'SKU',
   'dashboard.headers.product': 'Producto',
   'dashboard.headers.warehouse': 'Almacén',
@@ -163,6 +167,8 @@ export const es = {
   'movements.headers.warehouse': 'Almacén',
   'movements.headers.quantity': 'Cantidad',
   'movements.headers.sign': 'Signo',
+  'movements.headers.stockBefore': 'Stock inicial',
+  'movements.headers.stockAfter': 'Stock final',
   'movements.headers.unitPrice': 'Precio unitario',
   'movements.headers.reference': 'Referencia',
   'movements.headers.operationGroup': 'Grupo de operación',
@@ -191,6 +197,9 @@ export const es = {
   'movements.validation.sameWarehouse': 'El almacén de origen y destino deben ser diferentes.',
   'movements.submitFailed': 'No se pudo registrar el movimiento',
   'movements.empty': 'Sin movimientos',
+  'movements.help.adjustment.summary': '¿Para qué sirve un ajuste?',
+  'movements.help.adjustment.body':
+    'Usa el ajuste para corregir el stock sin editar el libro mayor: errores de conteo (correcciones), merma, sobrante o daño. El libro mayor es inmutable (solo inserción): el ajuste es la única vía de corrección. En la tabla, «Stock inicial» y «Stock final» muestran el saldo acumulado del producto en ese almacén antes y después de la fila, calculado sobre todo el historial, no solo las filas filtradas.',
 
   // ── audit ─────────────────────────────────────────────────────────────
   'audit.title': 'Auditoría',
@@ -213,4 +222,7 @@ export const es = {
   'audit.headers.userAgent': 'User agent',
   'audit.payloadSummary': 'payload',
   'audit.empty': 'Sin registros de auditoría',
+  'audit.help.summary': '¿Cómo leer la auditoría?',
+  'audit.help.body':
+    'Cada fila es un evento inmutable (solo inserción), escrito en la misma transacción que la operación: si la operación se revierte, la fila desaparece. Tipo de actor: user (persona), system (proceso automático) o anonymous (sin sesión). Acción: código del evento (p. ej. movements.adjustment.create). Entidad / ID de entidad: objeto afectado. Payload: JSON del cambio. IP y User agent: origen de la solicitud.',
 } as const

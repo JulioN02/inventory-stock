@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, ApiClientError } from '../api/client.ts'
 import { EmptyState } from '../components/EmptyState.tsx'
+import { HelpBlock } from '../components/HelpBlock.tsx'
 import { LoadingIndicator } from '../components/LoadingIndicator.tsx'
 import { RoleGate } from '../components/RoleGate.tsx'
 import { formatDateTime, formatNumber, localizeError, useTranslation } from '../i18n/index.ts'
@@ -139,6 +140,10 @@ export function MovementsPage() {
     <section>
       <h1>{t('movements.title')}</h1>
       <p className="muted small">{t('movements.intro')}</p>
+      <HelpBlock
+        summary={t('movements.help.adjustment.summary')}
+        body={t('movements.help.adjustment.body')}
+      />
       {success && (
         <div className="alert alert-success" role="status">
           {success}
@@ -263,7 +268,7 @@ function LedgerFilters({
 function LedgerTable({ items }: { items: MovementListItemDto[] }) {
   const { t, locale } = useTranslation()
   const hasOperationGroups = items.some((item) => item.operation_group_id !== null)
-  const colSpan = hasOperationGroups ? 10 : 9
+  const colSpan = hasOperationGroups ? 12 : 11
   return (
     <div className="table-wrap">
       <table className="table">
@@ -274,6 +279,8 @@ function LedgerTable({ items }: { items: MovementListItemDto[] }) {
             <th>{t('movements.headers.warehouse')}</th>
             <th>{t('movements.headers.quantity')}</th>
             <th>{t('movements.headers.sign')}</th>
+            <th>{t('movements.headers.stockBefore')}</th>
+            <th>{t('movements.headers.stockAfter')}</th>
             <th>{t('movements.headers.unitPrice')}</th>
             <th>{t('movements.headers.reference')}</th>
             {hasOperationGroups && <th>{t('movements.headers.operationGroup')}</th>}
@@ -292,6 +299,8 @@ function LedgerTable({ items }: { items: MovementListItemDto[] }) {
                 <td>{row.warehouse_code}</td>
                 <td>{formatNumber(row.quantity, locale)}</td>
                 <td>{row.sign === 1 ? '+1' : '−1'}</td>
+                <td>{formatNumber(row.stock_before, locale)}</td>
+                <td>{formatNumber(row.stock_after, locale)}</td>
                 <td>
                   {row.unit_price === null ? (
                     <span className="muted">—</span>

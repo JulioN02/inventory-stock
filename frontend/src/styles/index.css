@@ -454,6 +454,34 @@ select:hover {
   font-size: 0.85rem;
 }
 
+/* UI-HELP-MOV / UI-HELP-AUDIT: muted card help block, consistent with tokens. */
+.help-block {
+  background: var(--muted-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.9rem;
+  margin-bottom: var(--space-4);
+}
+
+.help-block summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.help-block summary::before {
+  content: '▸ ';
+  display: inline-block;
+  transition: transform 0.15s;
+}
+
+.help-block[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.help-block p {
+  margin: 0.4rem 0 0;
+}
+
 /* V3/V4 — narrow viewports: wrap chrome, stack forms, scroll wide tables. */
 @media (max-width: 640px) {
   .topbar {

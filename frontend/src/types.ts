@@ -102,6 +102,10 @@ export interface MovementDto {
 export interface MovementListItemDto extends MovementDto {
   sku: string
   warehouse_code: string
+  /** MOV-TRACE: running balance before this row, full-ledger (string numeric, D13). */
+  stock_before: string
+  /** MOV-TRACE: running balance after this row, full-ledger (string numeric, D13). */
+  stock_after: string
 }
 
 // Write payloads — mirror the server DTOs (string numerics D13; sign is

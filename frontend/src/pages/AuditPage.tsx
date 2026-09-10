@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client.ts'
 import { EmptyState } from '../components/EmptyState.tsx'
+import { HelpBlock } from '../components/HelpBlock.tsx'
 import { LoadingIndicator } from '../components/LoadingIndicator.tsx'
 import { formatDateTime, formatNumber, localizeError, useTranslation } from '../i18n/index.ts'
 import type { AuditDto, ListResult } from '../types.ts'
@@ -84,6 +85,7 @@ export function AuditPage() {
     <section>
       <h1>{t('audit.title')}</h1>
       <p className="muted small">{t('audit.intro')}</p>
+      <HelpBlock summary={t('audit.help.summary')} body={t('audit.help.body')} />
       {error && (
         <div className="alert alert-error" role="alert">
           {error}
