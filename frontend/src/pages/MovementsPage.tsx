@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { api, ApiClientError } from '../api/client.ts'
+import { EmptyState } from '../components/EmptyState.tsx'
+import { LoadingIndicator } from '../components/LoadingIndicator.tsx'
 import { RoleGate } from '../components/RoleGate.tsx'
+import { formatDateTime, formatNumber, localizeError, useTranslation } from '../i18n/index.ts'
+import type { MessageKey, TFunction } from '../i18n/index.ts'
 import { DIRECT_MOVEMENT_TYPES, MOVEMENT_TYPES } from '../types.ts'
 import type {
   AdjustmentCreateInput,
@@ -8,6 +12,7 @@ import type {
   ListResult,
   MovementCreateInput,
   MovementListItemDto,
+  MovementType,
   MovementWriteResult,
   Product,
   TransferCreateInput,
@@ -17,12 +22,22 @@ import type {
 const PAGE_SIZES = [20, 50, 100] as const
 const DEFAULT_PAGE_SIZE = 20
 
-const MOVEMENT_TYPE_LABELS: Record<string, string> = {
-  [MOVEMENT_TYPES.receiving]: 'Receiving',
-  [MOVEMENT_TYPES.sale]: 'Sale',
-  [MOVEMENT_TYPES.transferIn]: 'Transfer in',
-  [MOVEMENT_TYPES.transferOut]: 'Transfer out',
-  [MOVEMENT_TYPES.adjustment]: 'Adjustment',
+/**
+ * Movement type **values** stay byte-identical API codes (task 6.4); only the
+ * rendered label is localized. Mirrors `roles.ts` (ROLE_LABEL_KEYS).
+ */
+const MOVEMENT_TYPE_LABEL_KEYS = {
+  [MOVEMENT_TYPES.receiving]: 'movements.type.receiving',
+  [MOVEMENT_TYPES.sale]: 'movements.type.sale',
+  [MOVEMENT_TYPES.transferIn]: 'movements.type.transferIn',
+  [MOVEMENT_TYPES.transferOut]: 'movements.type.transferOut',
+  [MOVEMENT_TYPES.adjustment]: 'movements.type.adjustment',
+} as const satisfies Record<MovementType, MessageKey>
+
+/** Localized display label for a movement type. Unknown codes fall back raw. */
+function localizeMovementType(type: string, t: TFunction): string {
+  const key = MOVEMENT_TYPE_LABEL_KEYS[type as MovementType]
+  return key ? t(key) : type
 }
 
 const EMPTY_MOVEMENT_FORM = { product_id: '', warehouse_id: '', quantity: '', unit_price: '', reference: '' }
@@ -74,6 +89,7 @@ const EMPTY_FILTERS: LedgerFilters = {
  * 5xx so a retry of the SAME payload replays (200); 2xx/4xx regenerate.
  */
 export function MovementsPage() {
+  const { t, locale } = useTranslation()
   const [items, setItems] = useState<MovementListItemDto[]>([])
   const [total, setTotal] = useState(0)
   const [filters, setFilters] = useState<LedgerFilters>(EMPTY_FILTERS)
@@ -96,7 +112,7 @@ export function MovementsPage() {
       setItems(data.items)
       setTotal(data.total)
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'No se pudo cargar el libro mayor')
+      setError(localizeError(err, t))
     } finally {
       setLoading(false)
     }
@@ -113,20 +129,26 @@ export function MovementsPage() {
         setProducts(productData.items)
         setWarehouses(warehouseData.items)
       })
-      .catch(() => {
-        setError('No se pudieron cargar los productos y almacenes')
+      .catch((err: unknown) => {
+        setError(localizeError(err, t))
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (
     <section>
-      <h1>Movimientos</h1>
-      <p className="muted small">
-        El libro mayor se deriva del servidor — los números se muestran tal como llegan (string numerics, D13).
-      </p>
-      {success && <div className="alert alert-success">{success}</div>}
-      {error && <div className="alert alert-error">{error}</div>}
+      <h1>{t('movements.title')}</h1>
+      <p className="muted small">{t('movements.intro')}</p>
+      {success && (
+        <div className="alert alert-success" role="status">
+          {success}
+        </div>
+      )}
+      {error && (
+        <div className="alert alert-error" role="alert">
+          {error}
+        </div>
+      )}
 
       <RoleGate permission="movements:create">
         <ReceivingSaleForm
@@ -160,14 +182,9 @@ export function MovementsPage() {
         onSearch={() => void load()}
       />
 
-      {loading ? (
-        <p className="muted">Cargando…</p>
-      ) : (
-        <LedgerTable items={items} />
-      )}
+      {loading ? <LoadingIndicator /> : <LedgerTable items={items} />}
       <p className="muted small">
-        Total: {total} movimientos · Los traslados crean dos filas (transfer_out −, transfer_in +) que
-        comparten el mismo grupo de operación.
+        {t('movements.total', { total: formatNumber(total, locale) })}
       </p>
     </section>
   )
@@ -186,26 +203,27 @@ function LedgerFilters({
   warehouses: Warehouse[]
   onSearch: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <div className="toolbar">
       <select
         value={filters.type}
         onChange={(e) => onChange({ ...filters, type: e.target.value })}
-        aria-label="Tipo"
+        aria-label={t('movements.filter.type')}
       >
-        <option value="">Tipo: todos</option>
+        <option value="">{t('movements.filter.typeAll')}</option>
         {Object.values(MOVEMENT_TYPES).map((type) => (
           <option key={type} value={type}>
-            {MOVEMENT_TYPE_LABELS[type]}
+            {localizeMovementType(type, t)}
           </option>
         ))}
       </select>
       <select
         value={filters.product_id}
         onChange={(e) => onChange({ ...filters, product_id: e.target.value })}
-        aria-label="Producto"
+        aria-label={t('movements.filter.product')}
       >
-        <option value="">Producto: todos</option>
+        <option value="">{t('movements.filter.productAll')}</option>
         {products.map((product) => (
           <option key={product.id} value={product.id}>
             {product.sku} — {product.name}
@@ -215,9 +233,9 @@ function LedgerFilters({
       <select
         value={filters.warehouse_id}
         onChange={(e) => onChange({ ...filters, warehouse_id: e.target.value })}
-        aria-label="Almacén"
+        aria-label={t('movements.filter.warehouse')}
       >
-        <option value="">Almacén: todos</option>
+        <option value="">{t('movements.filter.warehouseAll')}</option>
         {warehouses.map((warehouse) => (
           <option key={warehouse.id} value={warehouse.id}>
             {warehouse.code} — {warehouse.name}
@@ -227,56 +245,72 @@ function LedgerFilters({
       <select
         value={filters.pageSize}
         onChange={(e) => onChange({ ...filters, pageSize: Number(e.target.value) })}
-        aria-label="Registros por página"
+        aria-label={t('common.pageSize')}
       >
         {PAGE_SIZES.map((size) => (
           <option key={size} value={size}>
-            {size} por página
+            {t('common.pageSizeOption', { n: size })}
           </option>
         ))}
       </select>
       <button type="button" className="btn" onClick={onSearch}>
-        Buscar
+        {t('common.search')}
       </button>
     </div>
   )
 }
 
 function LedgerTable({ items }: { items: MovementListItemDto[] }) {
+  const { t, locale } = useTranslation()
   const hasOperationGroups = items.some((item) => item.operation_group_id !== null)
+  const colSpan = hasOperationGroups ? 10 : 9
   return (
-    <table className="table">
-      <thead>
-        <tr>
-          <th>Tipo</th>
-          <th>SKU</th>
-          <th>Almacén</th>
-          <th>Cantidad</th>
-          <th>Signo</th>
-          <th>Precio unitario</th>
-          <th>Referencia</th>
-          {hasOperationGroups && <th>Grupo de operación</th>}
-          <th>Actor</th>
-          <th>Fecha</th>
-        </tr>
-      </thead>
-      <tbody>
-        {items.map((row) => (
-          <tr key={row.id}>
-            <td>{MOVEMENT_TYPE_LABELS[row.type] ?? row.type}</td>
-            <td>{row.sku}</td>
-            <td>{row.warehouse_code}</td>
-            <td>{row.quantity}</td>
-            <td>{row.sign === 1 ? '+1' : '−1'}</td>
-            <td>{row.unit_price ?? <span className="muted">—</span>}</td>
-            <td>{row.reference ?? <span className="muted">—</span>}</td>
-            {hasOperationGroups && <td>{row.operation_group_id ?? <span className="muted">—</span>}</td>}
-            <td>{row.actor_user_id ?? <span className="muted">—</span>}</td>
-            <td>{row.occurred_at}</td>
+    <div className="table-wrap">
+      <table className="table">
+        <thead>
+          <tr>
+            <th>{t('movements.headers.type')}</th>
+            <th>{t('movements.headers.sku')}</th>
+            <th>{t('movements.headers.warehouse')}</th>
+            <th>{t('movements.headers.quantity')}</th>
+            <th>{t('movements.headers.sign')}</th>
+            <th>{t('movements.headers.unitPrice')}</th>
+            <th>{t('movements.headers.reference')}</th>
+            {hasOperationGroups && <th>{t('movements.headers.operationGroup')}</th>}
+            <th>{t('movements.headers.actor')}</th>
+            <th>{t('movements.headers.date')}</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {items.length === 0 ? (
+            <EmptyState message={t('movements.empty')} colSpan={colSpan} />
+          ) : (
+            items.map((row) => (
+              <tr key={row.id}>
+                <td>{localizeMovementType(row.type, t)}</td>
+                <td>{row.sku}</td>
+                <td>{row.warehouse_code}</td>
+                <td>{formatNumber(row.quantity, locale)}</td>
+                <td>{row.sign === 1 ? '+1' : '−1'}</td>
+                <td>
+                  {row.unit_price === null ? (
+                    <span className="muted">—</span>
+                  ) : (
+                    formatNumber(row.unit_price, locale)
+                  )}
+                </td>
+                <td>{row.reference ?? <span className="muted">—</span>}</td>
+                {hasOperationGroups && (
+                  <td>{row.operation_group_id ?? <span className="muted">—</span>}</td>
+                )}
+                <td>{row.actor_user_id ?? <span className="muted">—</span>}</td>
+                <td>{formatDateTime(row.occurred_at, locale)}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
@@ -290,8 +324,12 @@ function LedgerTable({ items }: { items: MovementListItemDto[] }) {
  * Returns true when the outcome is definitive (2xx/4xx) — the caller resets
  * the form; false on commit-ambiguous (TypeError/5xx) — the caller KEEPS the
  * form values so the retry sends the identical payload (W1 verify fix).
+ *
+ * `t` is threaded in (task 6.2) so the module-level function can localize its
+ * notices/errors without a React hook; idempotency semantics are unchanged.
  */
 async function submitMovement(
+  t: TFunction,
   url: string,
   payload: Record<string, unknown>,
   idemKey: string | null,
@@ -309,9 +347,9 @@ async function submitMovement(
     setIdemKey(null) // 201 new / 200 replay → next submit gets a fresh UUID
     onError(null)
     if (status === 200) {
-      onNotice('movimiento ya registrado (replay)')
+      onNotice(t('movements.notice.replay'))
     } else {
-      onNotice('Movimiento registrado correctamente.')
+      onNotice(t('movements.notice.registered'))
     }
     await onRegistered()
     return true // definitive 2xx → caller resets the form
@@ -321,19 +359,19 @@ async function submitMovement(
       // KEEP the key AND the form values: retry sends the identical payload.
       setIdemKey(key)
       onNotice(null)
-      onError('movimiento NO registrado — vuelve a enviar para reintentar con la misma clave')
+      onError(t('movements.notice.ambiguous'))
       return false // ambiguous → caller KEEPS the form values for the retry
     } else if (err instanceof ApiClientError) {
       // Definitive 4xx — payload rejected, not committed → regenerate next time.
       setIdemKey(null)
       onNotice(null)
-      onError(err.message)
+      onError(localizeError(err, t))
       return true
     } else {
       // JSON parse error / unknown — safe default: regenerate.
       setIdemKey(null)
       onNotice(null)
-      onError('No se pudo registrar el movimiento')
+      onError(t('movements.submitFailed'))
       return true
     }
   }
@@ -341,6 +379,7 @@ async function submitMovement(
 
 /** MOV-UI: receiving | sale — single ledger row, sign derived server-side. */
 function ReceivingSaleForm({ products, warehouses, onError, onNotice, onRegistered }: WriteFormProps) {
+  const { t } = useTranslation()
   const [form, setForm] = useState<ReceivingSaleFormState>({
     ...EMPTY_MOVEMENT_FORM,
     type: DIRECT_MOVEMENT_TYPES.receiving,
@@ -363,7 +402,16 @@ function ReceivingSaleForm({ products, warehouses, onError, onNotice, onRegister
         unit_price: form.unit_price || undefined,
         reference: form.reference || undefined,
       }
-      const committed = await submitMovement('/api/movements', payload, idemKey, setIdemKey, onError, onNotice, onRegistered)
+      const committed = await submitMovement(
+        t,
+        '/api/movements',
+        payload,
+        idemKey,
+        setIdemKey,
+        onError,
+        onNotice,
+        onRegistered,
+      )
       if (committed) setForm({ ...EMPTY_MOVEMENT_FORM, type: form.type })
     } finally {
       setSubmitting(false)
@@ -372,68 +420,68 @@ function ReceivingSaleForm({ products, warehouses, onError, onNotice, onRegister
 
   return (
     <>
-      <h2>Registrar recepción / venta</h2>
+      <h2>{t('movements.form.receivingSaleTitle')}</h2>
       <form className="card form-row" onSubmit={handleSubmit}>
         <select
           value={form.product_id}
           onChange={(e) => setForm({ ...form, product_id: e.target.value })}
-          aria-label="Producto"
+          aria-label={t('movements.filter.product')}
           required
         >
-        <option value="">Producto…</option>
-        {products.map((product) => (
-          <option key={product.id} value={product.id}>
-            {product.sku} — {product.name}
-          </option>
-        ))}
-      </select>
-      <select
-        value={form.warehouse_id}
-        onChange={(e) => setForm({ ...form, warehouse_id: e.target.value })}
-        aria-label="Almacén"
-        required
-      >
-        <option value="">Almacén…</option>
-        {warehouses.map((warehouse) => (
-          <option key={warehouse.id} value={warehouse.id}>
-            {warehouse.code} — {warehouse.name}
-          </option>
-        ))}
-      </select>
-      <select
-        value={form.type}
-        onChange={(e) => setForm({ ...form, type: e.target.value })}
-        aria-label="Tipo"
-      >
-        <option value={DIRECT_MOVEMENT_TYPES.receiving}>Receiving</option>
-        <option value={DIRECT_MOVEMENT_TYPES.sale}>Sale</option>
-      </select>
-      <input
-        type="number"
-        step="0.1"
-        min="0.1"
-        placeholder="Cantidad"
-        value={form.quantity}
-        onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-        required
-      />
-      <input
-        type="number"
-        step="0.01"
-        min="0"
-        placeholder="Precio unitario (opcional)"
-        value={form.unit_price}
-        onChange={(e) => setForm({ ...form, unit_price: e.target.value })}
-      />
-      <input
-        placeholder="Referencia (opcional, máx. 200)"
-        maxLength={200}
-        value={form.reference}
-        onChange={(e) => setForm({ ...form, reference: e.target.value })}
-      />
-      <button type="submit" className="btn btn-primary" disabled={submitting}>
-        {submitting ? 'Registrando…' : 'Registrar'}
-      </button>
+          <option value="">{t('movements.form.productPlaceholder')}</option>
+          {products.map((product) => (
+            <option key={product.id} value={product.id}>
+              {product.sku} — {product.name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={form.warehouse_id}
+          onChange={(e) => setForm({ ...form, warehouse_id: e.target.value })}
+          aria-label={t('movements.filter.warehouse')}
+          required
+        >
+          <option value="">{t('movements.form.warehousePlaceholder')}</option>
+          {warehouses.map((warehouse) => (
+            <option key={warehouse.id} value={warehouse.id}>
+              {warehouse.code} — {warehouse.name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={form.type}
+          onChange={(e) => setForm({ ...form, type: e.target.value })}
+          aria-label={t('movements.filter.type')}
+        >
+          <option value={DIRECT_MOVEMENT_TYPES.receiving}>{t('movements.type.receiving')}</option>
+          <option value={DIRECT_MOVEMENT_TYPES.sale}>{t('movements.type.sale')}</option>
+        </select>
+        <input
+          type="number"
+          step="0.1"
+          min="0.1"
+          placeholder={t('movements.form.quantity')}
+          value={form.quantity}
+          onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+          required
+        />
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          placeholder={t('movements.form.unitPrice')}
+          value={form.unit_price}
+          onChange={(e) => setForm({ ...form, unit_price: e.target.value })}
+        />
+        <input
+          placeholder={t('movements.form.reference')}
+          maxLength={200}
+          value={form.reference}
+          onChange={(e) => setForm({ ...form, reference: e.target.value })}
+        />
+        <button type="submit" className="btn btn-primary" disabled={submitting}>
+          {submitting ? t('movements.form.submitting') : t('movements.form.submit')}
+        </button>
       </form>
     </>
   )
@@ -441,6 +489,7 @@ function ReceivingSaleForm({ products, warehouses, onError, onNotice, onRegister
 
 /** MOV-UI: transfer — two atomic ledger rows sharing operation_group_id. */
 function TransferForm({ products, warehouses, onError, onNotice, onRegistered }: WriteFormProps) {
+  const { t } = useTranslation()
   const [form, setForm] = useState(EMPTY_TRANSFER_FORM)
   const [idemKey, setIdemKey] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -453,7 +502,7 @@ function TransferForm({ products, warehouses, onError, onNotice, onRegistered }:
     onError(null)
     onNotice(null)
     if (form.source_warehouse_id === form.destination_warehouse_id) {
-      onError('El almacén de origen y destino deben ser diferentes.')
+      onError(t('movements.validation.sameWarehouse'))
       return
     }
     setSubmitting(true)
@@ -465,7 +514,16 @@ function TransferForm({ products, warehouses, onError, onNotice, onRegistered }:
         quantity: form.quantity,
         reference: form.reference || undefined,
       }
-      const committed = await submitMovement('/api/movements/transfers', payload, idemKey, setIdemKey, onError, onNotice, onRegistered)
+      const committed = await submitMovement(
+        t,
+        '/api/movements/transfers',
+        payload,
+        idemKey,
+        setIdemKey,
+        onError,
+        onNotice,
+        onRegistered,
+      )
       if (committed) setForm(EMPTY_TRANSFER_FORM)
     } finally {
       setSubmitting(false)
@@ -474,65 +532,65 @@ function TransferForm({ products, warehouses, onError, onNotice, onRegistered }:
 
   return (
     <>
-      <h2>Registrar traslado</h2>
+      <h2>{t('movements.form.transferTitle')}</h2>
       <form className="card form-row" onSubmit={handleSubmit}>
         <select
           value={form.product_id}
           onChange={(e) => setForm({ ...form, product_id: e.target.value })}
-          aria-label="Producto"
+          aria-label={t('movements.filter.product')}
           required
         >
-        <option value="">Producto…</option>
-        {products.map((product) => (
-          <option key={product.id} value={product.id}>
-            {product.sku} — {product.name}
-          </option>
-        ))}
-      </select>
-      <select
-        value={form.source_warehouse_id}
-        onChange={(e) => setForm({ ...form, source_warehouse_id: e.target.value })}
-        aria-label="Almacén de origen"
-        required
-      >
-        <option value="">Origen…</option>
-        {warehouses.map((warehouse) => (
-          <option key={warehouse.id} value={warehouse.id}>
-            {warehouse.code} — {warehouse.name}
-          </option>
-        ))}
-      </select>
-      <select
-        value={form.destination_warehouse_id}
-        onChange={(e) => setForm({ ...form, destination_warehouse_id: e.target.value })}
-        aria-label="Almacén de destino"
-        required
-      >
-        <option value="">Destino…</option>
-        {warehouses.map((warehouse) => (
-          <option key={warehouse.id} value={warehouse.id}>
-            {warehouse.code} — {warehouse.name}
-          </option>
-        ))}
-      </select>
-      <input
-        type="number"
-        step="0.1"
-        min="0.1"
-        placeholder="Cantidad"
-        value={form.quantity}
-        onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-        required
-      />
-      <input
-        placeholder="Referencia (opcional, máx. 200)"
-        maxLength={200}
-        value={form.reference}
-        onChange={(e) => setForm({ ...form, reference: e.target.value })}
-      />
-      <button type="submit" className="btn btn-primary" disabled={submitting}>
-        {submitting ? 'Registrando…' : 'Registrar'}
-      </button>
+          <option value="">{t('movements.form.productPlaceholder')}</option>
+          {products.map((product) => (
+            <option key={product.id} value={product.id}>
+              {product.sku} — {product.name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={form.source_warehouse_id}
+          onChange={(e) => setForm({ ...form, source_warehouse_id: e.target.value })}
+          aria-label={t('movements.form.sourceWarehouse')}
+          required
+        >
+          <option value="">{t('movements.form.sourcePlaceholder')}</option>
+          {warehouses.map((warehouse) => (
+            <option key={warehouse.id} value={warehouse.id}>
+              {warehouse.code} — {warehouse.name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={form.destination_warehouse_id}
+          onChange={(e) => setForm({ ...form, destination_warehouse_id: e.target.value })}
+          aria-label={t('movements.form.destinationWarehouse')}
+          required
+        >
+          <option value="">{t('movements.form.destinationPlaceholder')}</option>
+          {warehouses.map((warehouse) => (
+            <option key={warehouse.id} value={warehouse.id}>
+              {warehouse.code} — {warehouse.name}
+            </option>
+          ))}
+        </select>
+        <input
+          type="number"
+          step="0.1"
+          min="0.1"
+          placeholder={t('movements.form.quantity')}
+          value={form.quantity}
+          onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+          required
+        />
+        <input
+          placeholder={t('movements.form.reference')}
+          maxLength={200}
+          value={form.reference}
+          onChange={(e) => setForm({ ...form, reference: e.target.value })}
+        />
+        <button type="submit" className="btn btn-primary" disabled={submitting}>
+          {submitting ? t('movements.form.submitting') : t('movements.form.submit')}
+        </button>
       </form>
     </>
   )
@@ -540,6 +598,7 @@ function TransferForm({ products, warehouses, onError, onNotice, onRegistered }:
 
 /** MOV-UI: adjustment — signed quantity (±, never 0; 0 → server 422 backstop), reason required. */
 function AdjustmentForm({ products, warehouses, onError, onNotice, onRegistered }: WriteFormProps) {
+  const { t } = useTranslation()
   const [form, setForm] = useState(EMPTY_ADJUSTMENT_FORM)
   const [idemKey, setIdemKey] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -557,7 +616,16 @@ function AdjustmentForm({ products, warehouses, onError, onNotice, onRegistered 
         quantity: form.quantity,
         reason: form.reason,
       }
-      const committed = await submitMovement('/api/movements/adjustments', payload, idemKey, setIdemKey, onError, onNotice, onRegistered)
+      const committed = await submitMovement(
+        t,
+        '/api/movements/adjustments',
+        payload,
+        idemKey,
+        setIdemKey,
+        onError,
+        onNotice,
+        onRegistered,
+      )
       if (committed) setForm(EMPTY_ADJUSTMENT_FORM)
     } finally {
       setSubmitting(false)
@@ -566,52 +634,52 @@ function AdjustmentForm({ products, warehouses, onError, onNotice, onRegistered 
 
   return (
     <>
-      <h2>Registrar ajuste</h2>
+      <h2>{t('movements.form.adjustmentTitle')}</h2>
       <form className="card form-row" onSubmit={handleSubmit}>
         <select
           value={form.product_id}
           onChange={(e) => setForm({ ...form, product_id: e.target.value })}
-          aria-label="Producto"
+          aria-label={t('movements.filter.product')}
           required
         >
-        <option value="">Producto…</option>
-        {products.map((product) => (
-          <option key={product.id} value={product.id}>
-            {product.sku} — {product.name}
-          </option>
-        ))}
-      </select>
-      <select
-        value={form.warehouse_id}
-        onChange={(e) => setForm({ ...form, warehouse_id: e.target.value })}
-        aria-label="Almacén"
-        required
-      >
-        <option value="">Almacén…</option>
-        {warehouses.map((warehouse) => (
-          <option key={warehouse.id} value={warehouse.id}>
-            {warehouse.code} — {warehouse.name}
-          </option>
-        ))}
-      </select>
-      <input
-        type="number"
-        step="0.1"
-        placeholder="Cantidad (±, nunca 0)"
-        value={form.quantity}
-        onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-        required
-      />
-      <input
-        placeholder="Motivo (requerido, máx. 500)"
-        maxLength={500}
-        value={form.reason}
-        onChange={(e) => setForm({ ...form, reason: e.target.value })}
-        required
-      />
-      <button type="submit" className="btn btn-primary" disabled={submitting}>
-        {submitting ? 'Registrando…' : 'Registrar'}
-      </button>
+          <option value="">{t('movements.form.productPlaceholder')}</option>
+          {products.map((product) => (
+            <option key={product.id} value={product.id}>
+              {product.sku} — {product.name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={form.warehouse_id}
+          onChange={(e) => setForm({ ...form, warehouse_id: e.target.value })}
+          aria-label={t('movements.filter.warehouse')}
+          required
+        >
+          <option value="">{t('movements.form.warehousePlaceholder')}</option>
+          {warehouses.map((warehouse) => (
+            <option key={warehouse.id} value={warehouse.id}>
+              {warehouse.code} — {warehouse.name}
+            </option>
+          ))}
+        </select>
+        <input
+          type="number"
+          step="0.1"
+          placeholder={t('movements.form.adjustmentQuantity')}
+          value={form.quantity}
+          onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+          required
+        />
+        <input
+          placeholder={t('movements.form.reason')}
+          maxLength={500}
+          value={form.reason}
+          onChange={(e) => setForm({ ...form, reason: e.target.value })}
+          required
+        />
+        <button type="submit" className="btn btn-primary" disabled={submitting}>
+          {submitting ? t('movements.form.submitting') : t('movements.form.submit')}
+        </button>
       </form>
     </>
   )

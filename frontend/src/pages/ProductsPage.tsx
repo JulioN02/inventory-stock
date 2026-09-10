@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
-import { api, ApiClientError } from '../api/client.ts'
+import { api } from '../api/client.ts'
+import { EmptyState } from '../components/EmptyState.tsx'
+import { LoadingIndicator } from '../components/LoadingIndicator.tsx'
 import { RoleGate } from '../components/RoleGate.tsx'
+import { formatNumber, localizeError, useTranslation } from '../i18n/index.ts'
 import type { ListResult, Product } from '../types.ts'
 
 const UNITS = ['kg', 'g', 'l', 'ml', 'unit', 'box', 'pair'] as const
@@ -15,6 +18,7 @@ interface ProductForm {
 const EMPTY_FORM: ProductForm = { sku: '', name: '', unit: 'unit', price: '' }
 
 export function ProductsPage() {
+  const { t, locale } = useTranslation()
   const [products, setProducts] = useState<Product[]>([])
   const [total, setTotal] = useState(0)
   const [search, setSearch] = useState('')
@@ -31,7 +35,7 @@ export function ProductsPage() {
       setProducts(data.items)
       setTotal(data.total)
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'Failed to load products')
+      setError(localizeError(err, t))
     } finally {
       setLoading(false)
     }
@@ -50,7 +54,7 @@ export function ProductsPage() {
       setForm(EMPTY_FORM)
       await load()
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'Failed to create product')
+      setError(localizeError(err, t))
     }
   }
 
@@ -60,25 +64,29 @@ export function ProductsPage() {
       await api.delete<{ product: Product }>(`/api/products/${id}`)
       await load()
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'Failed to deactivate product')
+      setError(localizeError(err, t))
     }
   }
 
   return (
     <section>
-      <h1>Products</h1>
-      {error && <div className="alert alert-error">{error}</div>}
+      <h1>{t('products.title')}</h1>
+      {error && (
+        <div className="alert alert-error" role="alert">
+          {error}
+        </div>
+      )}
 
       <RoleGate permission="catalog:create">
         <form className="card form-row" onSubmit={createProduct}>
           <input
-            placeholder="SKU (auto upper-case)"
+            placeholder={t('products.placeholder.sku')}
             value={form.sku}
             onChange={(e) => setForm({ ...form, sku: e.target.value })}
             required
           />
           <input
-            placeholder="Name"
+            placeholder={t('products.placeholder.name')}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             required
@@ -86,7 +94,7 @@ export function ProductsPage() {
           <select
             value={form.unit}
             onChange={(e) => setForm({ ...form, unit: e.target.value })}
-            aria-label="Unit"
+            aria-label={t('products.unit')}
           >
             {UNITS.map((unit) => (
               <option key={unit} value={unit}>
@@ -95,20 +103,20 @@ export function ProductsPage() {
             ))}
           </select>
           <input
-            placeholder="Price (e.g. 9.99)"
+            placeholder={t('products.placeholder.price')}
             value={form.price}
             onChange={(e) => setForm({ ...form, price: e.target.value })}
             required
           />
           <button type="submit" className="btn btn-primary">
-            Create
+            {t('common.create')}
           </button>
         </form>
       </RoleGate>
 
       <div className="toolbar">
         <input
-          placeholder="Search by SKU or name…"
+          placeholder={t('products.placeholder.search')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => {
@@ -116,51 +124,61 @@ export function ProductsPage() {
           }}
         />
         <button type="button" className="btn" onClick={() => void load()}>
-          Search
+          {t('common.search')}
         </button>
       </div>
 
       {loading ? (
-        <p className="muted">Loading…</p>
+        <LoadingIndicator />
       ) : (
-        <table className="table">
-          <thead>
-            <tr>
-              <th>SKU</th>
-              <th>Name</th>
-              <th>Unit</th>
-              <th>Price</th>
-              <th>Status</th>
-              <th aria-label="actions" />
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((product) => (
-              <tr key={product.id}>
-                <td>{product.sku}</td>
-                <td>{product.name}</td>
-                <td>{product.unit}</td>
-                <td>{product.price}</td>
-                <td>{product.active ? 'active' : 'inactive'}</td>
-                <td>
-                  <RoleGate permission="catalog:deactivate">
-                    {product.active && (
-                      <button
-                        type="button"
-                        className="btn btn-danger btn-sm"
-                        onClick={() => void deactivate(product.id)}
-                      >
-                        Deactivate
-                      </button>
-                    )}
-                  </RoleGate>
-                </td>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{t('products.headers.sku')}</th>
+                <th>{t('products.headers.name')}</th>
+                <th>{t('products.headers.unit')}</th>
+                <th>{t('products.headers.price')}</th>
+                <th>{t('products.headers.status')}</th>
+                <th>
+                  <span className="sr-only">{t('common.actions')}</span>
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {products.length === 0 ? (
+                <EmptyState message={t('products.empty')} colSpan={6} />
+              ) : (
+                products.map((product) => (
+                  <tr key={product.id}>
+                    <td>{product.sku}</td>
+                    <td>{product.name}</td>
+                    <td>{product.unit}</td>
+                    <td>{formatNumber(product.price, locale)}</td>
+                    <td>{product.active ? t('common.active') : t('common.inactive')}</td>
+                    <td>
+                      <RoleGate permission="catalog:deactivate">
+                        {product.active && (
+                          <button
+                            type="button"
+                            className="btn btn-danger btn-sm"
+                            onClick={() => void deactivate(product.id)}
+                          >
+                            {t('common.deactivate')}
+                          </button>
+                        )}
+                      </RoleGate>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
-      <p className="muted small">Total: {total} products (string numerics — no float drift).</p>
+      <p className="muted small">
+        {t('products.total', { total: formatNumber(total, locale) })}
+      </p>
     </section>
   )
 }

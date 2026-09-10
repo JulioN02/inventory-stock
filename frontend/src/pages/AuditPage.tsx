@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
-import { api, ApiClientError } from '../api/client.ts'
+import { api } from '../api/client.ts'
+import { EmptyState } from '../components/EmptyState.tsx'
+import { LoadingIndicator } from '../components/LoadingIndicator.tsx'
+import { formatDateTime, formatNumber, localizeError, useTranslation } from '../i18n/index.ts'
 import type { AuditDto, ListResult } from '../types.ts'
 
 const PAGE_SIZES = [20, 50, 100] as const
@@ -24,6 +27,7 @@ const EMPTY_FILTERS: AuditFilters = { action: '', entity_type: '', from: '', to:
  * <details> collapse — XSS-safe (React escapes text), zero extra state (D-P10).
  */
 export function AuditPage() {
+  const { t, locale } = useTranslation()
   const [items, setItems] = useState<AuditDto[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -41,6 +45,7 @@ export function AuditPage() {
       params.set('pageSize', String(pageSize))
       if (filters.action) params.set('action', filters.action)
       if (filters.entity_type) params.set('entity_type', filters.entity_type)
+      // datetime-local values stay ISO (`yyyy-MM-ddTHH:mm`) → ISO-8601 (D-P9/I5).
       if (filters.from) params.set('from', new Date(filters.from).toISOString())
       if (filters.to) params.set('to', new Date(filters.to).toISOString())
       if (filters.actor) params.set('actor', filters.actor)
@@ -49,7 +54,7 @@ export function AuditPage() {
       setTotal(data.total)
       setPage(data.page)
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'No se pudo cargar la auditoría')
+      setError(localizeError(err, t))
     } finally {
       setLoading(false)
     }
@@ -63,7 +68,7 @@ export function AuditPage() {
   async function search(): Promise<void> {
     // OQ-A/D-P8: actor must be a valid UUID — reject client-side, no request.
     if (filters.actor && !UUID_PATTERN.test(filters.actor)) {
-      setError('El actor debe ser un UUID válido.')
+      setError(t('audit.uuidInvalid'))
       return
     }
     await load(1) // Search resets to page 1 (AUD-UI)
@@ -77,15 +82,17 @@ export function AuditPage() {
 
   return (
     <section>
-      <h1>Auditoría</h1>
-      <p className="muted small">
-        Registro de eventos de solo lectura — sin controles de escritura.
-      </p>
-      {error && <div className="alert alert-error">{error}</div>}
+      <h1>{t('audit.title')}</h1>
+      <p className="muted small">{t('audit.intro')}</p>
+      {error && (
+        <div className="alert alert-error" role="alert">
+          {error}
+        </div>
+      )}
 
       <div className="toolbar">
         <input
-          placeholder="Acción (p. ej. auth.login.success)"
+          placeholder={t('audit.placeholder.action')}
           value={filters.action}
           onChange={(e) => setFilter({ action: e.target.value })}
           onKeyDown={(e) => {
@@ -93,7 +100,7 @@ export function AuditPage() {
           }}
         />
         <input
-          placeholder="Tipo de entidad (p. ej. product)"
+          placeholder={t('audit.placeholder.entityType')}
           value={filters.entity_type}
           onChange={(e) => setFilter({ entity_type: e.target.value })}
           onKeyDown={(e) => {
@@ -102,18 +109,18 @@ export function AuditPage() {
         />
         <input
           type="datetime-local"
-          aria-label="Desde"
+          aria-label={t('audit.from')}
           value={filters.from}
           onChange={(e) => setFilter({ from: e.target.value })}
         />
         <input
           type="datetime-local"
-          aria-label="Hasta"
+          aria-label={t('audit.to')}
           value={filters.to}
           onChange={(e) => setFilter({ to: e.target.value })}
         />
         <input
-          placeholder="Actor (UUID, p. ej. 00000000-0000-0000-0000-000000000000)"
+          placeholder={t('audit.placeholder.actor')}
           pattern="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
           value={filters.actor}
           onChange={(e) => setFilter({ actor: e.target.value })}
@@ -124,36 +131,27 @@ export function AuditPage() {
         <select
           value={pageSize}
           onChange={(e) => setPageSize(Number(e.target.value))}
-          aria-label="Registros por página"
+          aria-label={t('common.pageSize')}
         >
           {PAGE_SIZES.map((size) => (
             <option key={size} value={size}>
-              {size} por página
+              {t('common.pageSizeOption', { n: size })}
             </option>
           ))}
         </select>
         <button type="button" className="btn" onClick={() => void search()}>
-          Buscar
+          {t('common.search')}
         </button>
       </div>
 
-      {loading ? (
-        <p className="muted">Cargando…</p>
-      ) : (
-        <AuditTable items={items} />
-      )}
+      {loading ? <LoadingIndicator /> : <AuditTable items={items} />}
 
       <div className="toolbar">
-        <button
-          type="button"
-          className="btn"
-          disabled={page === 1}
-          onClick={() => void load(page - 1)}
-        >
-          {'← prev'}
+        <button type="button" className="btn" disabled={page === 1} onClick={() => void load(page - 1)}>
+          {t('common.prev')}
         </button>
         <p className="muted small">
-          Página {page} · {total} en total
+          {t('common.pageSummary', { page, total: formatNumber(total, locale) })}
         </p>
         <button
           type="button"
@@ -161,7 +159,7 @@ export function AuditPage() {
           disabled={nextDisabled}
           onClick={() => void load(page + 1)}
         >
-          {'next →'}
+          {t('common.next')}
         </button>
       </div>
     </section>
@@ -169,41 +167,48 @@ export function AuditPage() {
 }
 
 function AuditTable({ items }: { items: AuditDto[] }) {
+  const { t, locale } = useTranslation()
   return (
-    <table className="table">
-      <thead>
-        <tr>
-          <th>Fecha</th>
-          <th>Tipo de actor</th>
-          <th>Actor</th>
-          <th>Acción</th>
-          <th>Entidad</th>
-          <th>ID de entidad</th>
-          <th>Payload</th>
-          <th>IP</th>
-          <th>User agent</th>
-        </tr>
-      </thead>
-      <tbody>
-        {items.map((row) => (
-          <tr key={row.id}>
-            <td>{row.occurred_at}</td>
-            <td>{row.actor_type}</td>
-            <td>{row.actor_user_id ?? <span className="muted">—</span>}</td>
-            <td>{row.action}</td>
-            <td>{row.entity_type ?? <span className="muted">—</span>}</td>
-            <td>{row.entity_id ?? <span className="muted">—</span>}</td>
-            <td>
-              <details>
-                <summary>payload</summary>
-                <pre>{JSON.stringify(row.payload, null, 2)}</pre>
-              </details>
-            </td>
-            <td>{row.ip ?? <span className="muted">—</span>}</td>
-            <td>{row.user_agent ?? <span className="muted">—</span>}</td>
+    <div className="table-wrap">
+      <table className="table">
+        <thead>
+          <tr>
+            <th>{t('audit.headers.date')}</th>
+            <th>{t('audit.headers.actorType')}</th>
+            <th>{t('audit.headers.actor')}</th>
+            <th>{t('audit.headers.action')}</th>
+            <th>{t('audit.headers.entity')}</th>
+            <th>{t('audit.headers.entityId')}</th>
+            <th>{t('audit.headers.payload')}</th>
+            <th>{t('audit.headers.ip')}</th>
+            <th>{t('audit.headers.userAgent')}</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {items.length === 0 ? (
+            <EmptyState message={t('audit.empty')} colSpan={9} />
+          ) : (
+            items.map((row) => (
+              <tr key={row.id}>
+                <td>{formatDateTime(row.occurred_at, locale)}</td>
+                <td>{row.actor_type}</td>
+                <td>{row.actor_user_id ?? <span className="muted">—</span>}</td>
+                <td>{row.action}</td>
+                <td>{row.entity_type ?? <span className="muted">—</span>}</td>
+                <td>{row.entity_id ?? <span className="muted">—</span>}</td>
+                <td>
+                  <details>
+                    <summary>{t('audit.payloadSummary')}</summary>
+                    <pre>{JSON.stringify(row.payload, null, 2)}</pre>
+                  </details>
+                </td>
+                <td>{row.ip ?? <span className="muted">—</span>}</td>
+                <td>{row.user_agent ?? <span className="muted">—</span>}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
   )
 }

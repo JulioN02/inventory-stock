@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.tsx'
-import { ApiClientError } from '../api/client.ts'
+import { localizeError, useTranslation } from '../i18n/index.ts'
 
 export function LoginPage() {
   const { login } = useAuth()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -19,7 +20,7 @@ export function LoginPage() {
       await login(username, password)
       navigate('/')
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'Login failed')
+      setError(localizeError(err, t))
     } finally {
       setSubmitting(false)
     }
@@ -28,11 +29,15 @@ export function LoginPage() {
   return (
     <div className="auth-page">
       <form className="card auth-card" onSubmit={handleSubmit}>
-        <h1>Inventory &amp; Stock</h1>
-        <p className="muted">Sign in to continue</p>
-        {error && <div className="alert alert-error">{error}</div>}
+        <h1>{t('layout.brand')}</h1>
+        <p className="muted">{t('login.subtitle')}</p>
+        {error && (
+          <div className="alert alert-error" role="alert">
+            {error}
+          </div>
+        )}
         <label>
-          Username
+          {t('login.username')}
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
@@ -41,7 +46,7 @@ export function LoginPage() {
           />
         </label>
         <label>
-          Password
+          {t('login.password')}
           <input
             type="password"
             value={password}
@@ -51,11 +56,11 @@ export function LoginPage() {
           />
         </label>
         <button type="submit" className="btn btn-primary" disabled={submitting}>
-          {submitting ? 'Signing in…' : 'Sign in'}
+          {submitting ? t('login.submitting') : t('login.submit')}
         </button>
         <p className="muted small">
-          Account management is restricted to administrators.
-          <Link to="/register"> Register</Link>
+          {t('login.accountRestricted')}
+          <Link to="/register"> {t('login.registerLink')}</Link>
         </p>
       </form>
     </div>

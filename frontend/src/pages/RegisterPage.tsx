@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext.tsx'
-import { ApiClientError } from '../api/client.ts'
 import { RoleGate } from '../components/RoleGate.tsx'
+import { localizeError, localizeRole, useTranslation } from '../i18n/index.ts'
 
 /** Mirrors the backend REGISTERABLE_ROLES whitelist (operator|viewer|auditor). */
 const REGISTERABLE_ROLES = ['operator', 'viewer', 'auditor'] as const
@@ -9,6 +9,7 @@ const REGISTERABLE_ROLES = ['operator', 'viewer', 'auditor'] as const
 /** Admin-only registration (OQ-3) — server enforces users:create. REG-ROLE: optional role selector. */
 export function RegisterPage() {
   const { register } = useAuth()
+  const { t } = useTranslation()
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -24,28 +25,45 @@ export function RegisterPage() {
     setSubmitting(true)
     try {
       const user = await register({ username, email, password, role })
-      setMessage(`User '${user.username}' created (role: ${user.role}).`)
+      setMessage(
+        t('register.success', { username: user.username, role: localizeRole(user.role, t) }),
+      )
       setUsername('')
       setEmail('')
       setPassword('')
       setRole('viewer')
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'Registration failed')
+      setError(localizeError(err, t))
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <RoleGate permission="users:create" fallback={<div className="alert alert-error">Forbidden: admin only.</div>}>
+    <RoleGate
+      permission="users:create"
+      fallback={
+        <div className="alert alert-error" role="alert">
+          {t('register.forbidden')}
+        </div>
+      }
+    >
       <div className="auth-page">
         <form className="card auth-card" onSubmit={handleSubmit}>
-          <h1>Register user</h1>
-          <p className="muted">New users get the viewer role by default.</p>
-          {message && <div className="alert alert-success">{message}</div>}
-          {error && <div className="alert alert-error">{error}</div>}
+          <h1>{t('register.title')}</h1>
+          <p className="muted">{t('register.subtitle')}</p>
+          {message && (
+            <div className="alert alert-success" role="status">
+              {message}
+            </div>
+          )}
+          {error && (
+            <div className="alert alert-error" role="alert">
+              {error}
+            </div>
+          )}
           <label>
-            Username
+            {t('register.username')}
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -55,7 +73,7 @@ export function RegisterPage() {
             />
           </label>
           <label>
-            Email
+            {t('register.email')}
             <input
               type="email"
               value={email}
@@ -64,7 +82,7 @@ export function RegisterPage() {
             />
           </label>
           <label>
-            Password
+            {t('register.password')}
             <input
               type="password"
               value={password}
@@ -74,17 +92,17 @@ export function RegisterPage() {
             />
           </label>
           <label>
-            Role
+            {t('register.role')}
             <select value={role} onChange={(e) => setRole(e.target.value)}>
               {REGISTERABLE_ROLES.map((option) => (
                 <option key={option} value={option}>
-                  {option}
+                  {localizeRole(option, t)}
                 </option>
               ))}
             </select>
           </label>
           <button type="submit" className="btn btn-primary" disabled={submitting}>
-            {submitting ? 'Creating…' : 'Create user'}
+            {submitting ? t('register.submitting') : t('register.submit')}
           </button>
         </form>
       </div>

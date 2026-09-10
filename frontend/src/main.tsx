@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { App } from './App.tsx'
 import { AuthProvider } from './auth/AuthContext.tsx'
+import { LocaleProvider } from './i18n/index.ts'
 import './styles/index.css'
 
 const rootElement = document.getElementById('root')
@@ -11,9 +12,11 @@ if (!rootElement) throw new Error('Root element #root not found')
 createRoot(rootElement).render(
   <StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <LocaleProvider>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </LocaleProvider>
     </BrowserRouter>
   </StrictMode>,
 )

@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, ApiClientError } from '../api/client.ts'
+import { api } from '../api/client.ts'
 import { useAuth } from '../auth/AuthContext.tsx'
+import { EmptyState } from '../components/EmptyState.tsx'
+import { LoadingIndicator } from '../components/LoadingIndicator.tsx'
 import { RoleGate } from '../components/RoleGate.tsx'
+import { formatNumber, localizeError, localizeRole, useTranslation } from '../i18n/index.ts'
 import type { LowStockItem, StockItem } from '../types.ts'
 
 const LOW_STOCK_THRESHOLD = 5
@@ -15,38 +18,42 @@ const LOW_STOCK_THRESHOLD = 5
  */
 export function DashboardPage() {
   const { user } = useAuth()
+  const { t } = useTranslation()
   return (
     <section>
-      <h1>Dashboard</h1>
+      <h1>{t('dashboard.title')}</h1>
       <p>
-        Welcome, <strong>{user?.username}</strong> ({user?.role}).
+        {t('dashboard.welcome', {
+          username: user?.username ?? '',
+          role: localizeRole(user?.role ?? '', t),
+        })}
       </p>
       <div className="card-grid">
         <Link className="card" to="/products">
-          <h2>Products</h2>
-          <p>Catalog master data — SKU, unit, price.</p>
+          <h2>{t('dashboard.card.products.title')}</h2>
+          <p>{t('dashboard.card.products.desc')}</p>
         </Link>
         <Link className="card" to="/warehouses">
-          <h2>Warehouses</h2>
-          <p>Physical locations holding stock.</p>
+          <h2>{t('dashboard.card.warehouses.title')}</h2>
+          <p>{t('dashboard.card.warehouses.desc')}</p>
         </Link>
         <RoleGate permission="movements:read">
           <Link className="card" to="/movements">
-            <h2>Movements</h2>
-            <p>Register receiving/sale, transfers and adjustments; view the ledger.</p>
+            <h2>{t('dashboard.card.movements.title')}</h2>
+            <p>{t('dashboard.card.movements.desc')}</p>
           </Link>
         </RoleGate>
         <RoleGate permission="audit:read">
           <Link className="card" to="/audit">
-            <h2>Audit</h2>
-            <p>Read-only trail of every recorded event.</p>
+            <h2>{t('dashboard.card.audit.title')}</h2>
+            <p>{t('dashboard.card.audit.desc')}</p>
           </Link>
         </RoleGate>
       </div>
 
       <RoleGate
         permission="movements:read"
-        fallback={<p className="muted">No stock visibility for this role.</p>}
+        fallback={<p className="muted">{t('dashboard.noStockVisibility')}</p>}
       >
         <StockSection />
       </RoleGate>
@@ -55,6 +62,7 @@ export function DashboardPage() {
 }
 
 function StockSection() {
+  const { t, locale } = useTranslation()
   const [stock, setStock] = useState<StockItem[]>([])
   const [low, setLow] = useState<LowStockItem[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -71,7 +79,7 @@ function StockSection() {
       setStock(stockData.items)
       setLow(lowData.items)
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'Failed to load stock')
+      setError(localizeError(err, t))
     } finally {
       setLoading(false)
     }
@@ -82,60 +90,70 @@ function StockSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  if (loading) return <p className="muted">Loading stock…</p>
+  if (loading) return <LoadingIndicator />
 
   return (
     <>
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && (
+        <div className="alert alert-error" role="alert">
+          {error}
+        </div>
+      )}
 
-      <h2>Stock levels</h2>
-      <p className="muted small">
-        Derived from the movement ledger (SQL SUM) — never stored. String numerics, scale 1.
-      </p>
-      <table className="table">
-        <thead>
-          <tr>
-            <th>SKU</th>
-            <th>Product</th>
-            <th>Warehouse</th>
-            <th>Stock</th>
-          </tr>
-        </thead>
-        <tbody>
-          {stock.map((row) => (
-            <tr key={`${row.product_id}:${row.warehouse_id}`}>
-              <td>{row.sku}</td>
-              <td>{row.name}</td>
-              <td>{row.warehouse_code}</td>
-              <td>{row.stock}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <h2>Low stock (below {LOW_STOCK_THRESHOLD})</h2>
-      {low.length === 0 ? (
-        <p className="muted">Nothing below the threshold.</p>
-      ) : (
+      <h2>{t('dashboard.stockLevels')}</h2>
+      <p className="muted small">{t('dashboard.stockNote')}</p>
+      <div className="table-wrap">
         <table className="table">
           <thead>
             <tr>
-              <th>SKU</th>
-              <th>Product</th>
-              <th>Stock</th>
+              <th>{t('dashboard.headers.sku')}</th>
+              <th>{t('dashboard.headers.product')}</th>
+              <th>{t('dashboard.headers.warehouse')}</th>
+              <th>{t('dashboard.headers.stock')}</th>
             </tr>
           </thead>
           <tbody>
-            {low.map((row) => (
-              <tr key={row.product_id}>
-                <td>{row.sku}</td>
-                <td>{row.name}</td>
-                <td>{row.stock}</td>
-              </tr>
-            ))}
+            {stock.length === 0 ? (
+              <EmptyState message={t('dashboard.empty')} colSpan={4} />
+            ) : (
+              stock.map((row) => (
+                <tr key={`${row.product_id}:${row.warehouse_id}`}>
+                  <td>{row.sku}</td>
+                  <td>{row.name}</td>
+                  <td>{row.warehouse_code}</td>
+                  <td>{formatNumber(row.stock, locale)}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
-      )}
+      </div>
+
+      <h2>{t('dashboard.lowStock', { threshold: LOW_STOCK_THRESHOLD })}</h2>
+      <div className="table-wrap">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>{t('dashboard.headers.sku')}</th>
+              <th>{t('dashboard.headers.product')}</th>
+              <th>{t('dashboard.headers.stock')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {low.length === 0 ? (
+              <EmptyState message={t('dashboard.nothingBelow')} colSpan={3} />
+            ) : (
+              low.map((row) => (
+                <tr key={row.product_id}>
+                  <td>{row.sku}</td>
+                  <td>{row.name}</td>
+                  <td>{formatNumber(row.stock, locale)}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </>
   )
 }

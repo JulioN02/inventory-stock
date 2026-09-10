@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
-import { api, ApiClientError } from '../api/client.ts'
+import { api } from '../api/client.ts'
+import { EmptyState } from '../components/EmptyState.tsx'
+import { LoadingIndicator } from '../components/LoadingIndicator.tsx'
 import { RoleGate } from '../components/RoleGate.tsx'
+import { formatNumber, localizeError, useTranslation } from '../i18n/index.ts'
 import type { ListResult, Warehouse } from '../types.ts'
 
 interface WarehouseForm {
@@ -11,6 +14,7 @@ interface WarehouseForm {
 const EMPTY_FORM: WarehouseForm = { name: '', code: '' }
 
 export function WarehousesPage() {
+  const { t, locale } = useTranslation()
   const [warehouses, setWarehouses] = useState<Warehouse[]>([])
   const [total, setTotal] = useState(0)
   const [form, setForm] = useState<WarehouseForm>(EMPTY_FORM)
@@ -25,7 +29,7 @@ export function WarehousesPage() {
       setWarehouses(data.items)
       setTotal(data.total)
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'Failed to load warehouses')
+      setError(localizeError(err, t))
     } finally {
       setLoading(false)
     }
@@ -44,7 +48,7 @@ export function WarehousesPage() {
       setForm(EMPTY_FORM)
       await load()
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'Failed to create warehouse')
+      setError(localizeError(err, t))
     }
   }
 
@@ -54,72 +58,86 @@ export function WarehousesPage() {
       await api.delete<{ warehouse: Warehouse }>(`/api/warehouses/${id}`)
       await load()
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'Failed to deactivate warehouse')
+      setError(localizeError(err, t))
     }
   }
 
   return (
     <section>
-      <h1>Warehouses</h1>
-      {error && <div className="alert alert-error">{error}</div>}
+      <h1>{t('warehouses.title')}</h1>
+      {error && (
+        <div className="alert alert-error" role="alert">
+          {error}
+        </div>
+      )}
 
       <RoleGate permission="catalog:create">
         <form className="card form-row" onSubmit={createWarehouse}>
           <input
-            placeholder="Name"
+            placeholder={t('warehouses.placeholder.name')}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             required
           />
           <input
-            placeholder="Code (e.g. WH-MAIN)"
+            placeholder={t('warehouses.placeholder.code')}
             value={form.code}
             onChange={(e) => setForm({ ...form, code: e.target.value })}
             required
           />
           <button type="submit" className="btn btn-primary">
-            Create
+            {t('common.create')}
           </button>
         </form>
       </RoleGate>
 
       {loading ? (
-        <p className="muted">Loading…</p>
+        <LoadingIndicator />
       ) : (
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Code</th>
-              <th>Status</th>
-              <th aria-label="actions" />
-            </tr>
-          </thead>
-          <tbody>
-            {warehouses.map((warehouse) => (
-              <tr key={warehouse.id}>
-                <td>{warehouse.name}</td>
-                <td>{warehouse.code}</td>
-                <td>{warehouse.active ? 'active' : 'inactive'}</td>
-                <td>
-                  <RoleGate permission="catalog:deactivate">
-                    {warehouse.active && (
-                      <button
-                        type="button"
-                        className="btn btn-danger btn-sm"
-                        onClick={() => void deactivate(warehouse.id)}
-                      >
-                        Deactivate
-                      </button>
-                    )}
-                  </RoleGate>
-                </td>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{t('warehouses.headers.name')}</th>
+                <th>{t('warehouses.headers.code')}</th>
+                <th>{t('warehouses.headers.status')}</th>
+                <th>
+                  <span className="sr-only">{t('common.actions')}</span>
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {warehouses.length === 0 ? (
+                <EmptyState message={t('warehouses.empty')} colSpan={4} />
+              ) : (
+                warehouses.map((warehouse) => (
+                  <tr key={warehouse.id}>
+                    <td>{warehouse.name}</td>
+                    <td>{warehouse.code}</td>
+                    <td>{warehouse.active ? t('common.active') : t('common.inactive')}</td>
+                    <td>
+                      <RoleGate permission="catalog:deactivate">
+                        {warehouse.active && (
+                          <button
+                            type="button"
+                            className="btn btn-danger btn-sm"
+                            onClick={() => void deactivate(warehouse.id)}
+                          >
+                            {t('common.deactivate')}
+                          </button>
+                        )}
+                      </RoleGate>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
-      <p className="muted small">Total: {total} warehouses.</p>
+      <p className="muted small">
+        {t('warehouses.total', { total: formatNumber(total, locale) })}
+      </p>
     </section>
   )
 }
