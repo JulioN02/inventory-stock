@@ -6,6 +6,10 @@ Proyecto profesional CORE de la Temporada 1 — **entregado**. Documentación pe
 
 Estado: ✅ Entregado · 138/138 tests · typecheck limpio
 
+## Sitio en vivo
+
+Landing page bilingüe (español por defecto, con selector a inglés): [https://julion02.github.io/inventory-stock/](https://julion02.github.io/inventory-stock/)
+
 ## Dominio
 
 El stock nunca se setea: se deriva del libro mayor de movimientos.

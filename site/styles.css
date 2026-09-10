@@ -1,0 +1,671 @@
+/* ==========================================================================
+   Inventory & Stock — portfolio site stylesheet (site/styles.css)
+   Tokens mirrored verbatim from frontend/src/styles/index.css (:root, D2).
+   Presentation only: no build step, no dependencies.
+   ========================================================================== */
+
+:root {
+  /* Palette (verbatim from the app) */
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --border: #d8dce3;
+  --border-strong: #c2c9d3;
+  --text: #1c2430;
+  --muted: #5b6675;
+  --primary: #2563eb;
+  --primary-strong: #1d4ed8;
+  --danger: #b91c1c;
+  --success: #15803d;
+
+  /* Soft / semantic state surfaces */
+  --primary-soft: #e8effc;
+  --muted-bg: #fafbfc;
+  --danger-soft: #fef2f2;
+  --danger-soft-strong: #fee2e2;
+  --danger-border: #fecaca;
+  --danger-border-strong: #fca5a5;
+  --success-soft: #f0fdf4;
+  --success-border: #bbf7d0;
+
+  /* Spacing scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-md: 0 4px 12px rgb(0 0 0 / 0.08);
+
+  /* Focus ring (WCAG 2.4.7) */
+  --focus-ring: #2563eb;
+
+  /* Heading scale (from the app) */
+  --h1-size: 1.55rem;
+  --h2-size: 1.15rem;
+
+  /* Site-only: height used to offset anchors below the sticky header */
+  --header-offset: 72px;
+}
+
+/* ── Base ──────────────────────────────────────────────────────────────── */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+}
+
+h1 {
+  font-size: var(--h1-size);
+  margin: 0 0 var(--space-4);
+}
+
+h2 {
+  font-size: var(--h2-size);
+  margin: var(--space-5) 0 var(--space-3);
+}
+
+h3 {
+  font-size: 1rem;
+  margin: 0 0 var(--space-2);
+}
+
+p {
+  margin: 0 0 var(--space-3);
+}
+
+a {
+  color: var(--primary);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Visible keyboard focus ring on every interactive element (mirror app). */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Utilities ─────────────────────────────────────────────────────────── */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: var(--space-3);
+  z-index: 20;
+  padding: var(--space-2) var(--space-3);
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: top 0.15s;
+}
+
+.skip-link:focus {
+  top: var(--space-3);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.lead {
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+/* ── Sticky header + nav ───────────────────────────────────────────────── */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.nav {
+  display: flex;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.nav a {
+  padding: 0.4rem 0.7rem;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--muted);
+  white-space: nowrap;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.nav a:hover {
+  background: var(--muted-bg);
+  color: var(--text);
+}
+
+.nav a.active {
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+}
+
+.locale-toggle {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+/* ── Buttons (mirror app) ──────────────────────────────────────────────── */
+
+.btn {
+  display: inline-block;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s;
+}
+
+.btn:hover {
+  background: var(--muted-bg);
+  border-color: var(--border-strong);
+}
+
+.btn-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--primary-strong);
+  border-color: var(--primary-strong);
+  color: #fff;
+}
+
+.btn-sm {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+/* ── Layout ────────────────────────────────────────────────────────────── */
+
+.content {
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--space-5);
+}
+
+main section {
+  scroll-margin-top: var(--header-offset);
+}
+
+main section > h2 {
+  font-size: 1.5rem;
+  margin-top: var(--space-6);
+}
+
+/* ── Hero (P1) ─────────────────────────────────────────────────────────── */
+
+.hero {
+  padding: var(--space-6) 0 var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+
+.hero h1 {
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  margin-bottom: var(--space-3);
+}
+
+.hero-pitch {
+  font-size: 1.1rem;
+  max-width: 60ch;
+}
+
+.hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.badge {
+  display: inline-block;
+  margin: 0 0 var(--space-3);
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--primary-soft);
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.badge-success {
+  background: var(--success-soft);
+  border-color: var(--success-border);
+  color: var(--success);
+}
+
+/* ── Flow diagrams (P2) ────────────────────────────────────────────────── */
+
+.flow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-4);
+  margin: var(--space-4) 0;
+}
+
+.flow-figure {
+  min-width: 0; /* allow the inner scrollable <pre> to shrink instead of forcing the grid track */
+  margin: 0;
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.flow-figure figcaption {
+  margin-bottom: var(--space-2);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.flow {
+  margin: 0;
+  padding: var(--space-3);
+  background: var(--muted-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  color: var(--text);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* ── Cards (P3, P6, P12) ───────────────────────────────────────────────── */
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.card {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+}
+
+.card p:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Lists (P4, P5, P6, P8, P9, P11) ───────────────────────────────────── */
+
+.checklist {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-3) 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.checklist li {
+  position: relative;
+  padding-left: 1.6rem;
+}
+
+.checklist li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--success);
+  font-weight: 700;
+}
+
+.tech-list,
+.api-list {
+  margin: var(--space-2) 0 0;
+  padding-left: 1.2rem;
+}
+
+.tech-list li,
+.api-list li {
+  margin-bottom: var(--space-1);
+  overflow-wrap: anywhere;
+}
+
+.code-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-1) var(--space-3);
+  list-style: none;
+  padding: 0;
+  margin: var(--space-2) 0 var(--space-4);
+}
+
+.code-list li {
+  overflow-wrap: anywhere;
+}
+
+/* ── Tables (P7) ───────────────────────────────────────────────────────── */
+
+.table-wrap {
+  overflow-x: auto;
+  margin: var(--space-3) 0 var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+
+.table th {
+  background: var(--muted-bg);
+  font-size: 0.85rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background: var(--muted-bg);
+}
+
+/* ── Code (P8, P9, P10) ────────────────────────────────────────────────── */
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.88em;
+  background: var(--muted-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  overflow-wrap: anywhere;
+}
+
+.commands {
+  margin: var(--space-3) 0;
+  padding: var(--space-4);
+  background: var(--muted-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  line-height: 1.7;
+  color: var(--text);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* ── Stats (P11) ───────────────────────────────────────────────────────── */
+
+.stat {
+  font-size: 2.4rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--primary);
+  margin: var(--space-2) 0 var(--space-4);
+}
+
+/* ── Screenshots (S1) ──────────────────────────────────────────────────── */
+
+.shot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.shot {
+  min-width: 0;
+  margin: 0;
+}
+
+.shot-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  aspect-ratio: 16 / 10;
+  padding: var(--space-4);
+  text-align: center;
+  background: var(--muted-bg);
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+}
+
+.shot-label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.shot-filename {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.shot figcaption {
+  margin-top: var(--space-2);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* ── Footer (P13) ──────────────────────────────────────────────────────── */
+
+.footer {
+  padding: var(--space-5);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.footer p {
+  margin: 0 0 var(--space-1);
+}
+
+.footer p:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Responsive (D1) ───────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .topbar {
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+    padding: var(--space-3);
+  }
+
+  .brand {
+    flex: 1 1 auto;
+  }
+
+  .locale-toggle {
+    order: 1;
+    margin-left: auto;
+  }
+
+  .nav {
+    order: 2;
+    flex: 1 1 100%;
+  }
+
+  .nav a {
+    padding: 0.35rem 0.55rem;
+  }
+
+  .content {
+    padding: var(--space-4) var(--space-3);
+  }
+
+  main section > h2 {
+    font-size: 1.25rem;
+  }
+
+  .hero h1 {
+    font-size: 1.6rem;
+  }
+
+  .hero-pitch {
+    font-size: 1rem;
+  }
+
+  .card-grid,
+  .flow-grid,
+  .shot-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table {
+    min-width: 480px;
+  }
+
+  .stat {
+    font-size: 2rem;
+  }
+
+  .footer {
+    padding: var(--space-4) var(--space-3);
+  }
+}
+
+/* ── Print ─────────────────────────────────────────────────────────────── */
+
+@media print {
+  body {
+    background: #fff;
+  }
+
+  .topbar,
+  .skip-link,
+  .hero-cta {
+    display: none;
+  }
+
+  .content {
+    max-width: none;
+    padding: 0;
+  }
+
+  .card,
+  .flow-figure,
+  .table-wrap,
+  .shot-placeholder {
+    box-shadow: none;
+  }
+
+  .shot-placeholder {
+    border-style: solid;
+  }
+
+  a {
+    color: var(--text);
+    text-decoration: underline;
+  }
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .btn,
+  .nav a,
+  .skip-link {
+    transition: none;
+  }
+}

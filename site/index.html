@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n-title="meta.title">Inventory &amp; Stock — Sistema de Gestión de Inventario y Stock</title>
+  <meta name="description" data-i18n-meta="meta.description" content="Proyecto de portafolio: sistema de inventario y stock donde el stock se deriva de un libro mayor inmutable de movimientos. Monolito modular + vertical slices, API-first, Express 5 + React 19 + PostgreSQL 16." />
+  <meta name="theme-color" content="#2563eb" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Open Graph (static ES: los crawlers no ejecutan JS) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Inventory &amp; Stock — Sistema de Gestión de Inventario y Stock" />
+  <meta property="og:description" content="Proyecto de portafolio: el stock se deriva de un libro mayor inmutable de movimientos. Express 5 + React 19 + PostgreSQL 16." />
+  <meta property="og:url" content="https://julion02.github.io/inventory-stock/" />
+</head>
+<body>
+  <a class="skip-link" href="#main" data-i18n="topbar.skipLink">Saltar al contenido</a>
+
+  <header class="topbar">
+    <a class="brand" href="#hero" data-i18n="topbar.brand">Inventory &amp; Stock</a>
+    <nav class="nav" aria-labelledby="nav-label">
+      <span id="nav-label" class="visually-hidden" data-i18n="topbar.navLabel">Navegación</span>
+      <a href="#overview" data-i18n="nav.overview">Descripción</a>
+      <a href="#features" data-i18n="nav.features">Funciones</a>
+      <a href="#fundamentals" data-i18n="nav.fundamentals">Fundamentos</a>
+      <a href="#architecture" data-i18n="nav.architecture">Arquitectura</a>
+      <a href="#stack" data-i18n="nav.stack">Stack</a>
+      <a href="#modules" data-i18n="nav.modules">Módulos</a>
+      <a href="#data-model" data-i18n="nav.dataModel">Modelo de datos</a>
+      <a href="#api" data-i18n="nav.api">API</a>
+      <a href="#run" data-i18n="nav.run">Cómo correr</a>
+      <a href="#tests" data-i18n="nav.tests">Tests</a>
+      <a href="#labs" data-i18n="nav.labs">Labs</a>
+      <a href="#screenshots" data-i18n="nav.screenshots">Capturas</a>
+    </nav>
+    <div class="locale-toggle" role="group" aria-labelledby="locale-label">
+      <span id="locale-label" class="visually-hidden" data-i18n="topbar.localeLabel">Idioma</span>
+      <button type="button" data-locale="es" class="btn btn-sm btn-primary" aria-pressed="true">ES</button>
+      <button type="button" data-locale="en" class="btn btn-sm" aria-pressed="false">EN</button>
+    </div>
+  </header>
+
+  <main id="main" class="content">
+
+    <!-- P1 · Hero -->
+    <section id="hero" class="hero" aria-labelledby="hero-title">
+      <p class="badge" data-i18n="hero.badge">Proyecto profesional · Temporada 1</p>
+      <h1 id="hero-title" data-i18n="hero.title">Sistema de Gestión de Inventario y Stock</h1>
+      <p class="hero-pitch" data-i18n-html="hero.pitch">El stock es una <strong>consecuencia</strong> de movimientos inmutables, no un valor que se edite a mano.</p>
+      <p class="badge badge-success" data-i18n="hero.status">Entregado · 138/138 tests · typecheck limpio</p>
+      <p class="hero-cta">
+        <a class="btn btn-primary" href="https://github.com/JulioN02/inventory-stock" data-i18n="hero.ctaRepo">Ver repositorio</a>
+        <a class="btn" href="#run" data-i18n="hero.ctaRun">Cómo correr</a>
+      </p>
+    </section>
+
+    <!-- P2 · Descripción del proyecto -->
+    <section id="overview" aria-labelledby="overview-title">
+      <h2 id="overview-title" data-i18n="overview.title">Descripción del proyecto</h2>
+      <p class="lead" data-i18n-html="overview.lead"><strong>No</strong> es el típico CRUD de inventario.</p>
+      <p data-i18n="overview.insight">El stock nunca se establece: se deriva del libro mayor de movimientos. Cada movimiento es una fila inmutable y el saldo es una vista agregada.</p>
+      <div class="flow-grid">
+        <figure class="flow-figure">
+          <figcaption data-i18n="overview.flowPurchase">Flujo de compra</figcaption>
+          <pre class="flow">Purchase → Receiving → Stock Movement → Inventory</pre>
+        </figure>
+        <figure class="flow-figure">
+          <figcaption data-i18n="overview.flowSale">Flujo de venta</figcaption>
+          <pre class="flow">Sale     → Stock Movement → Inventory</pre>
+        </figure>
+      </div>
+    </section>
+
+    <!-- P3 · Funciones / capacidades -->
+    <section id="features" aria-labelledby="features-title">
+      <h2 id="features-title" data-i18n="features.title">Funciones / capacidades</h2>
+      <p class="lead" data-i18n="features.lead">Lo que demuestra el proyecto, más allá de un ABM de productos.</p>
+      <div class="card-grid">
+        <article class="card">
+          <h3 data-i18n="features.card1.title">Transacciones</h3>
+          <p data-i18n="features.card1.body">Atomicidad de operaciones multi-tabla: si una parte falla, no queda ningún cambio a medias.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="features.card2.title">Consistencia</h3>
+          <p data-i18n="features.card2.body">Invariantes de stock bajo concurrencia; imposible vender stock inexistente (LAB-01).</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="features.card3.title">Idempotencia</h3>
+          <p data-i18n="features.card3.body">Reintentos seguros sin efectos duplicados mediante claves de idempotencia (LAB-02).</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="features.card4.title">Auditoría</h3>
+          <p data-i18n="features.card4.body">Quién, cuándo y qué cambió, de forma inmutable y append-only (LAB-08).</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="features.card5.title">SQL</h3>
+          <p data-i18n="features.card5.body">Consultas parametrizadas, joins de RBAC y la vista agregada stock_levels.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="features.card6.title">Permisos</h3>
+          <p data-i18n="features.card6.body">RBAC verificado por request sobre módulos y operaciones.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- P4 · Fundamentos -->
+    <section id="fundamentals" aria-labelledby="fundamentals-title">
+      <h2 id="fundamentals-title" data-i18n="fundamentals.title">Fundamentos</h2>
+      <p class="lead" data-i18n="fundamentals.lead">Las reglas de dominio que sostienen el sistema.</p>
+      <ul class="checklist">
+        <li data-i18n-html="fundamentals.item1">Libro mayor inmutable: los movimientos nunca se editan ni se borran.</li>
+        <li data-i18n-html="fundamentals.item2">Cada movimiento es una fila con <code>quantity &gt; 0</code> y un <code>sign</code> de ±1.</li>
+        <li data-i18n-html="fundamentals.item3"><code>stock_levels</code> es una vista: <code>SUM(quantity * sign)</code>.</li>
+        <li data-i18n-html="fundamentals.item4">Un <code>pg_advisory_xact_lock</code> por clave <code>(product, warehouse)</code> evita sobregirar el stock bajo concurrencia.</li>
+        <li data-i18n-html="fundamentals.item5">Idempotencia con <code>idempotency_key</code> + <code>request_hash</code> canónico (SHA-256): un reintento devuelve 200 y una operación nueva, 201.</li>
+        <li data-i18n-html="fundamentals.item6">La auditoría append-only se garantiza con el trigger de base de datos <code>forbid_ledger_mutation</code>.</li>
+      </ul>
+    </section>
+
+    <!-- P5 · Arquitectura -->
+    <section id="architecture" aria-labelledby="architecture-title">
+      <h2 id="architecture-title" data-i18n="architecture.title">Arquitectura</h2>
+      <p class="lead" data-i18n="architecture.lead">Un monolito modular organizado por vertical slices, con contrato API-first.</p>
+      <ul class="checklist">
+        <li data-i18n="architecture.point1">Monolito modular + vertical slices: cada módulo agrupa su dominio, su servicio y sus rutas.</li>
+        <li data-i18n="architecture.point2">API-first: el contrato HTTP se define antes que la interfaz y es la fuente de verdad.</li>
+        <li data-i18n="architecture.point3">Un solo origen: Express sirve el SPA compilado, sin CORS entre frontend y backend.</li>
+      </ul>
+    </section>
+
+    <!-- P6 · Stack -->
+    <section id="stack" aria-labelledby="stack-title">
+      <h2 id="stack-title" data-i18n="stack.title">Stack</h2>
+      <p class="lead" data-i18n="stack.lead">Versiones exactas, sin rangos.</p>
+      <div class="card-grid">
+        <article class="card">
+          <h3 data-i18n="stack.backend.title">Backend</h3>
+          <ul class="tech-list" data-i18n-html="stack.backend.items">
+            <li>Node.js (ESM) + TypeScript 5.9 estricto</li>
+            <li>Express 5.2.1</li>
+            <li>zod 4.4.3</li>
+            <li>pg 8.23.0</li>
+            <li>bcryptjs 3.0.3</li>
+            <li>jsonwebtoken 9.0.3</li>
+            <li>cookie-parser 1.4.7</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3 data-i18n="stack.frontend.title">Frontend</h3>
+          <ul class="tech-list" data-i18n-html="stack.frontend.items">
+            <li>React 19.2.8 (React Compiler)</li>
+            <li>Vite 6.4.3</li>
+            <li>react-router-dom 7.18.2</li>
+            <li>CSS plano</li>
+            <li>Cliente fetch con token en memoria</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3 data-i18n="stack.database.title">Base de datos</h3>
+          <ul class="tech-list" data-i18n-html="stack.database.items">
+            <li>PostgreSQL 16 (Docker, puerto 55434)</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3 data-i18n="stack.testing.title">Testing</h3>
+          <ul class="tech-list" data-i18n-html="stack.testing.items">
+            <li>node:test + supertest</li>
+            <li>138/138 tests</li>
+            <li>Typecheck limpio</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- P7 · Módulos -->
+    <section id="modules" aria-labelledby="modules-title">
+      <h2 id="modules-title" data-i18n="modules.title">Módulos</h2>
+      <p class="lead" data-i18n="modules.lead">Seis módulos con responsabilidades claras.</p>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th data-i18n="modules.th.module">Módulo</th>
+              <th data-i18n="modules.th.role">Rol</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>Products</code></td>
+              <td data-i18n="modules.products.role">Catálogo de productos</td>
+            </tr>
+            <tr>
+              <td><code>Warehouses</code></td>
+              <td data-i18n="modules.warehouses.role">Ubicaciones físicas de almacenamiento</td>
+            </tr>
+            <tr>
+              <td><code>Movements</code></td>
+              <td data-i18n="modules.movements.role">Libro mayor inmutable: recepción, venta, transferencia y ajuste</td>
+            </tr>
+            <tr>
+              <td><code>Stock</code></td>
+              <td data-i18n="modules.stock.role">Estado derivado de los movimientos (vista SQL)</td>
+            </tr>
+            <tr>
+              <td><code>Auth / RBAC</code></td>
+              <td data-i18n="modules.auth.role">Login, refresh rotativo y 13 permisos sobre 4 roles (admin/operator/viewer/auditor)</td>
+            </tr>
+            <tr>
+              <td><code>Audit</code></td>
+              <td data-i18n="modules.audit.role">Auditoría append-only de eventos de dominio y autenticación</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- P8 · Modelo de datos -->
+    <section id="data-model" aria-labelledby="data-model-title">
+      <h2 id="data-model-title" data-i18n="dataModel.title">Modelo de datos</h2>
+      <p class="lead" data-i18n="dataModel.lead">Tablas normalizadas y una vista para el saldo derivado.</p>
+      <h3 data-i18n="dataModel.tablesLabel">Tablas</h3>
+      <ul class="code-list" data-i18n-html="dataModel.tables">
+        <li><code>users</code></li>
+        <li><code>roles</code></li>
+        <li><code>permissions</code></li>
+        <li><code>role_permissions</code></li>
+        <li><code>user_roles</code></li>
+        <li><code>refresh_tokens</code></li>
+        <li><code>products</code></li>
+        <li><code>warehouses</code></li>
+        <li><code>movements</code></li>
+        <li><code>audit_log</code></li>
+      </ul>
+      <h3 data-i18n="dataModel.viewLabel">Vista</h3>
+      <pre class="flow" data-i18n="dataModel.view">stock_levels = SUM(quantity * sign)</pre>
+      <p data-i18n-html="dataModel.note">La tabla <code>products</code> no tiene columna de cantidad: el stock siempre se calcula desde los movimientos.</p>
+    </section>
+
+    <!-- P9 · API -->
+    <section id="api" aria-labelledby="api-title">
+      <h2 id="api-title" data-i18n="api.title">API</h2>
+      <p class="lead" data-i18n="api.lead">Superficie HTTP del sistema, agrupada por recurso.</p>
+      <ul class="api-list">
+        <li data-i18n-html="api.health"><code>GET /api/health</code></li>
+        <li data-i18n-html="api.auth"><code>POST /api/auth/{register,login,refresh,logout}</code> — <code>register</code> solo para administradores.</li>
+        <li data-i18n-html="api.products"><code>GET/POST/PATCH/DELETE /api/products</code></li>
+        <li data-i18n-html="api.warehouses"><code>GET/POST/PATCH/DELETE /api/warehouses</code></li>
+        <li data-i18n-html="api.movements"><code>POST/GET /api/movements</code>, <code>POST /api/movements/transfers</code>, <code>POST /api/movements/adjustments</code></li>
+        <li data-i18n-html="api.stock"><code>GET /api/stock</code>, <code>GET /api/stock/low</code></li>
+        <li data-i18n-html="api.audit"><code>GET /api/audit</code></li>
+      </ul>
+      <p data-i18n-html="api.note">Todas las rutas protegidas verifican permisos por request.</p>
+    </section>
+
+    <!-- P10 · Cómo correr -->
+    <section id="run" aria-labelledby="run-title">
+      <h2 id="run-title" data-i18n="run.title">Cómo correr</h2>
+      <p class="lead" data-i18n="run.lead">Requiere Docker y Node.js.</p>
+      <pre class="commands" data-i18n-html="run.commands">docker compose up -d          # PostgreSQL 16 (puerto 55434)
+npm run migrate               # migraciones
+npm run seed:admin            # bootstrap del admin
+npm run dev:api               # Express 5 en http://localhost:3000
+npm run dev:web               # Vite + React 19 en http://localhost:5173
+npm test                      # 138/138
+npm run typecheck</pre>
+      <p data-i18n-html="run.note">Copia <code>backend/.env.example</code> a <code>backend/.env</code> antes de correr el backend.</p>
+    </section>
+
+    <!-- P11 · Tests -->
+    <section id="tests" aria-labelledby="tests-title">
+      <h2 id="tests-title" data-i18n="tests.title">Tests</h2>
+      <p class="lead" data-i18n="tests.lead">Evidencia de calidad del proyecto.</p>
+      <p class="stat" data-i18n="tests.stat">138/138</p>
+      <ul class="checklist">
+        <li data-i18n="tests.item1">Suite de backend con node:test + supertest.</li>
+        <li data-i18n="tests.item2">Typecheck limpio con TypeScript estricto.</li>
+        <li data-i18n="tests.item3">Sin tests automatizados de frontend: decisión documentada, verificada con typecheck y E2E manual.</li>
+      </ul>
+    </section>
+
+    <!-- P12 · Labs -->
+    <section id="labs" aria-labelledby="labs-title">
+      <h2 id="labs-title" data-i18n="labs.title">Labs</h2>
+      <p class="lead" data-i18n="labs.lead">Los ejercicios que dieron forma al sistema.</p>
+      <div class="card-grid">
+        <article class="card">
+          <h3 data-i18n="labs.lab1.title">LAB-01 · Race Condition</h3>
+          <p data-i18n="labs.lab1.body">Consistencia de stock bajo concurrencia: el advisory lock por producto y almacén impide vender stock inexistente.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="labs.lab2.title">LAB-02 · Idempotency</h3>
+          <p data-i18n="labs.lab2.body">Operaciones repetidas sin efectos duplicados: la clave de idempotencia y el hash del request detectan reintentos.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="labs.lab8.title">LAB-08 · Audit Trail</h3>
+          <p data-i18n="labs.lab8.body">Auditoría inmutable: el trigger de base de datos rechaza cualquier mutación del libro mayor y del log de auditoría.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- S1 · Screenshots -->
+    <section id="screenshots" aria-labelledby="screenshots-title">
+      <h2 id="screenshots-title" data-i18n="screenshots.title">Capturas</h2>
+      <p class="lead" data-i18n="screenshots.lead">Recorrido visual de la aplicación.</p>
+      <p class="muted" data-i18n="screenshots.note">Imágenes pendientes: los marcadores se reemplazan por capturas reales siguiendo la convención documentada.</p>
+      <div class="shot-grid">
+        <figure class="shot">
+          <div class="shot-placeholder" role="img" aria-labelledby="shot-dashboard-label">
+            <span class="shot-label" id="shot-dashboard-label" data-i18n="screenshots.cap.dashboard">Panel</span>
+            <span class="shot-filename">screenshots/dashboard-es.png</span>
+          </div>
+          <figcaption data-i18n="screenshots.cap.dashboard">Panel</figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="shot-placeholder" role="img" aria-labelledby="shot-products-label">
+            <span class="shot-label" id="shot-products-label" data-i18n="screenshots.cap.products">Productos</span>
+            <span class="shot-filename">screenshots/products-es.png</span>
+          </div>
+          <figcaption data-i18n="screenshots.cap.products">Productos</figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="shot-placeholder" role="img" aria-labelledby="shot-warehouses-label">
+            <span class="shot-label" id="shot-warehouses-label" data-i18n="screenshots.cap.warehouses">Almacenes</span>
+            <span class="shot-filename">screenshots/warehouses-es.png</span>
+          </div>
+          <figcaption data-i18n="screenshots.cap.warehouses">Almacenes</figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="shot-placeholder" role="img" aria-labelledby="shot-movements-label">
+            <span class="shot-label" id="shot-movements-label" data-i18n="screenshots.cap.movements">Movimientos</span>
+            <span class="shot-filename">screenshots/movements-es.png</span>
+          </div>
+          <figcaption data-i18n="screenshots.cap.movements">Movimientos</figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="shot-placeholder" role="img" aria-labelledby="shot-audit-label">
+            <span class="shot-label" id="shot-audit-label" data-i18n="screenshots.cap.audit">Auditoría</span>
+            <span class="shot-filename">screenshots/audit-es.png</span>
+          </div>
+          <figcaption data-i18n="screenshots.cap.audit">Auditoría</figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="shot-placeholder" role="img" aria-labelledby="shot-login-label">
+            <span class="shot-label" id="shot-login-label" data-i18n="screenshots.cap.login">Inicio de sesión</span>
+            <span class="shot-filename">screenshots/login-es.png</span>
+          </div>
+          <figcaption data-i18n="screenshots.cap.login">Inicio de sesión</figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="shot-placeholder" role="img" aria-labelledby="shot-register-label">
+            <span class="shot-label" id="shot-register-label" data-i18n="screenshots.cap.register">Registro</span>
+            <span class="shot-filename">screenshots/register-es.png</span>
+          </div>
+          <figcaption data-i18n="screenshots.cap.register">Registro</figcaption>
+        </figure>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- P13 · Footer -->
+  <footer class="footer">
+    <p data-i18n="footer.built">Sitio estático bilingüe · sin build · sin dependencias</p>
+    <p data-i18n-html="footer.repo">Repositorio: <a href="https://github.com/JulioN02/inventory-stock">github.com/JulioN02/inventory-stock</a></p>
+  </footer>
+
+  <script src="i18n.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
